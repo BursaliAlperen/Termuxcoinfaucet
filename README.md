@@ -16,18 +16,25 @@ Aynı klasördeysen:
 bash install_termux.sh
 ```
 
-## Tek komut (kurulum + arkaplan başlatma)
+## Tek komut + tek klasör (kurulum + arkaplan başlatma)
 
-Aynı klasördeysen sadece şunu çalıştır:
+Sadece şunu çalıştır:
 
 ```bash
 bash setup_and_run.sh
 ```
 
-Bu komut sırayla:
-- kurulum yapar,
-- derleme kontrolünü çalıştırır,
-- botu arkaplanda başlatır.
+Bu komut her şeyi otomatik olarak **tek klasöre** toplar:
+- hedef klasör: `$HOME/termuxcoinfaucet`
+- dosyaları bu klasöre kopyalar
+- kurulumu yapar
+- botu arkaplanda başlatır
+
+İstersen klasörü değiştirebilirsin:
+
+```bash
+APP_HOME=$HOME/my_faucet bash setup_and_run.sh
+```
 
 ## Ön planda çalıştırma (klasik)
 
