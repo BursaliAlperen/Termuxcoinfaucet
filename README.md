@@ -16,6 +16,19 @@ Aynı klasördeysen:
 bash install_termux.sh
 ```
 
+## Tek komut (kurulum + arkaplan başlatma)
+
+Aynı klasördeysen sadece şunu çalıştır:
+
+```bash
+bash setup_and_run.sh
+```
+
+Bu komut sırayla:
+- kurulum yapar,
+- derleme kontrolünü çalıştırır,
+- botu arkaplanda başlatır.
+
 ## Ön planda çalıştırma (klasik)
 
 ```bash
