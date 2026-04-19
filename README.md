@@ -16,13 +16,38 @@ Aynı klasördeysen:
 bash install_termux.sh
 ```
 
-Kurulum bitince çalıştırma:
+## Ön planda çalıştırma (klasik)
 
 ```bash
 termux-x11 :1 &
 export DISPLAY=:1
 python bot.py
 ```
+
+## Arkaplanda çalıştırma (yeni)
+
+Kurulumdan sonra tek komut:
+
+```bash
+./manage_background.sh start
+```
+
+Durum kontrolü:
+
+```bash
+./manage_background.sh status
+```
+
+Durdurma:
+
+```bash
+./manage_background.sh stop
+```
+
+Log dosyaları:
+
+- `logs/termux-x11.log`
+- `logs/bot.log`
 
 ## Manuel çalıştırma
 
