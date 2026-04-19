@@ -8,7 +8,23 @@
 - E-posta ve cüzdan alanları varsayılan olarak doldurulur.
 - Arama, seçim işaretleme ve panoya kopyalama özellikleri vardır.
 
-## Çalıştırma
+## Termux'a direkt (otomatik) kurulum
+
+Aynı klasördeysen:
+
+```bash
+bash install_termux.sh
+```
+
+Kurulum bitince çalıştırma:
+
+```bash
+termux-x11 :1 &
+export DISPLAY=:1
+python bot.py
+```
+
+## Manuel çalıştırma
 
 ```bash
 python bot.py
