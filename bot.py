@@ -53,17 +53,35 @@ def banner(cycle=0, active_network="IDLE", email="N/A", mode=FREE_MODE):
 
 def get_config():
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r') as f: return json.load(f)
-    else:
-        banner(active_network="CONFIG")
-        print(f"{B}[?] {W}Configuring New User Details...")
-        email = input(f"{C}➤ FaucetPay Email : {W}")
-        api_key = input(f"{C}➤ xEvil API Key   : {W}")
-        mode_input = input(f"{C}➤ Mode (free/paid) [free]: {W}").strip().lower()
-        mode = PAID_MODE if mode_input == PAID_MODE else FREE_MODE
-        data = {"email": email, "api_key": api_key, "phpsessid": "", "mode": mode}
-        with open(CONFIG_FILE, 'w') as f: json.dump(data, f)
+        with open(CONFIG_FILE, 'r') as f:
+            data = json.load(f)
+        # Backward-compatible config migration for old/broken config files.
+        if not isinstance(data, dict):
+            data = {}
+        if not data.get("email"):
+            banner(active_network="CONFIG FIX")
+            print(f"{Y}[!] Missing 'email' in config.json. Please re-enter details.{W}")
+            data["email"] = input(f"{C}➤ FaucetPay Email : {W}").strip()
+        if not data.get("api_key"):
+            data["api_key"] = input(f"{C}➤ xEvil API Key   : {W}").strip()
+        if "phpsessid" not in data:
+            data["phpsessid"] = ""
+        mode_input = str(data.get("mode", FREE_MODE)).strip().lower()
+        data["mode"] = PAID_MODE if mode_input == PAID_MODE else FREE_MODE
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(data, f)
         return data
+
+    banner(active_network="CONFIG")
+    print(f"{B}[?] {W}Configuring New User Details...")
+    email = input(f"{C}➤ FaucetPay Email : {W}")
+    api_key = input(f"{C}➤ xEvil API Key   : {W}")
+    mode_input = input(f"{C}➤ Mode (free/paid) [free]: {W}").strip().lower()
+    mode = PAID_MODE if mode_input == PAID_MODE else FREE_MODE
+    data = {"email": email, "api_key": api_key, "phpsessid": "", "mode": mode}
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(data, f)
+    return data
 
 def get_mode_coin_sets(mode):
     if mode == PAID_MODE:
