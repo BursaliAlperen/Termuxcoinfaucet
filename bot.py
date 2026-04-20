@@ -5,8 +5,6 @@ import re
 import os
 import json
 import sys
-import random
-from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # --- [ PRO COLORS ] ---
@@ -15,18 +13,6 @@ G, R, Y, C, W, M, B = '\033[1;32m', '\033[1;31m', '\033[1;33m', '\033[1;36m', '\
 CONFIG_FILE = "config.json"
 SOLVER_URL = "http://157.180.15.203"
 SITE_KEY = "6LfwaSgTAAAAAJJNz6oAdimVHmIe3s4fHj4D0at4"
-
-# --- 🔑 KEY SYSTEM DATABASE ---
-KEY_SYSTEM = [
-    {"link": "https://bit.ly/4rVKoyd", "key": "C4COIN-CHANNEL-BRO"},
-    {"link": "https://bit.ly/4s6DMxk", "key": "C4COIN1"},
-    {"link": "https://bit.ly/3NhNJZk", "key": "C4COIN-SMART"},
-    {"link": "https://bit.ly/4rXKiWO", "key": "C4COIN-CRAZY"},
-    {"link": "https://bit.ly/47AE0nU", "key": "C4coin-Earn"},
-    {"link": "https://bit.ly/4bw1qNI", "key": "C4COIN-C4COIN"},
-    {"link": "https://bit.ly/4lfWlMF", "key": "C4COIN-RUSH"},
-    {"link": "https://bit.ly/4lrbOtC", "key": "SMART-C4COIN"}
-]
 
 COINS_FREE = ["bitcoin", "ethereum", "tether", "bnb", "solana", "usdc", "ripple", "dogecoin", "tron", "toncoin", "bch", "cardano", "litecoin", "polygon", "monero", "stellar", "zcash", "dash", "digibyte", "feyorra"]
 COINS_BEE = ["eth", "usdt", "bnb", "sol", "usdc", "xrp", "doge", "trx", "ton", "bch", "ada", "ltc", "matic", "xmr", "xlm", "zec", "dash", "dgb", "fey", "btcb"]
@@ -38,43 +24,34 @@ def slow_type(text, speed=0.002):
         sys.stdout.write(char); sys.stdout.flush(); time.sleep(speed)
     print()
 
-def banner():
+def banner(cycle=0, active_network="IDLE", email="N/A"):
     clear()
-    print(f"{C}────────────────────────────────────────────────────────{W}")
-    print(f"{G}   _____  _  _    _____  ____  _____  _   _ ")
-    print(f"  / ____|| || |  / ____|/ __ \|_   _|| \ | |")
-    print(f" | |     | || |_| |    | |  | | | |  |  \| |")
-    print(f" | |____ |__   _| |____| |__| |_| |_ | |\  |")
-    print(f"  \_____|   |_|  \_____|\____/|_____||_| \_|")
-    print(f"                                           ")
-    print(f"{M}             X   V E N U J A N             ")
-    print(f"{C}────────────────────────────────────────────────────────{W}")
-    print(f"{G}      🚀  ULTIMATE CRYPTO PRINTING ENGINE v7.0  🚀      {W}")
-    print(f"{C}────────────────────────────────────────────────────────{W}")
-    print(f" {B}● ADMIN: {G}VENUJAN {B}● STATUS: {G}ONLINE {B}● TIME: {Y}{time.strftime('%H:%M:%S')}{W}")
-    print(f"{C}────────────────────────────────────────────────────────{W}")
-
-def verify_key():
-    banner()
-    # Randomly select a key from the database
-    selected = random.choice(KEY_SYSTEM)
-    print(f"{B}[!] {Y}VISIT THE LINK BELOW TO GET THE ACCESS KEY:")
-    print(f"{C}➤ LINK: {G}{selected['link']}{W}\n")
-    
-    user_key = input(f"{B}[?] {W}ENTER ACCESS KEY: {W}").strip()
-    
-    if user_key == selected['key']:
-        print(f"\n{G}✅ ACCESS GRANTED! INITIALIZING...{W}")
-        time.sleep(2)
-    else:
-        print(f"\n{R}❌ INVALID KEY! TERMINATING SESSION...{W}")
-        sys.exit()
+    line = f"{C}{'═' * 72}{W}"
+    print(line)
+    print(f"{G} ██████╗  ██████╗ ████████╗    ██╗      ██████╗ ███╗   ██╗███████╗██╗  ██╗{W}")
+    print(f"{G} ██╔══██╗██╔═══██╗╚══██╔══╝    ██║     ██╔═══██╗████╗  ██║██╔════╝╚██╗██╔╝{W}")
+    print(f"{G} ██████╔╝██║   ██║   ██║       ██║     ██║   ██║██╔██╗ ██║█████╗   ╚███╔╝ {W}")
+    print(f"{G} ██╔══██╗██║   ██║   ██║       ██║     ██║   ██║██║╚██╗██║██╔══╝   ██╔██╗ {W}")
+    print(f"{G} ██████╔╝╚██████╔╝   ██║       ███████╗╚██████╔╝██║ ╚████║███████╗██╔╝ ██╗{W}")
+    print(f"{G} ╚═════╝  ╚═════╝    ╚═╝       ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝{W}")
+    print(line)
+    print(
+        f"{B}● MODE:{W} {G}OPEN (NO KEY SYSTEM){W}   "
+        f"{B}● CYCLE:{W} {Y}{cycle}{W}   "
+        f"{B}● NETWORK:{W} {M}{active_network}{W}"
+    )
+    print(
+        f"{B}● USER:{W} {C}{email}{W}   "
+        f"{B}● STATUS:{W} {G}ONLINE{W}   "
+        f"{B}● TIME:{W} {Y}{time.strftime('%H:%M:%S')}{W}"
+    )
+    print(line)
 
 def get_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'r') as f: return json.load(f)
     else:
-        banner()
+        banner(active_network="CONFIG")
         print(f"{B}[?] {W}Configuring New User Details...")
         email = input(f"{C}➤ FaucetPay Email : {W}")
         api_key = input(f"{C}➤ xEvil API Key   : {W}")
@@ -121,11 +98,10 @@ def claim_process(coin, email, token, site_type, sess_id=""):
     except: return f"{R}ERROR{W}"
 
 def start_bot():
-    verify_key() # Verify Key System first
     config = get_config()
     cycle = 1
     while True:
-        banner()
+        banner(cycle=cycle, active_network="BATCH START", email=config['email'])
         print(f"{M}🌀 BATCH: #{cycle} STARTING...{W}\n")
 
         # --- SOURCE 1 ---
