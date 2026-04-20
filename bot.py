@@ -101,7 +101,7 @@ def get_captcha_token(api_key, page_url):
 def claim_process(coin, email, token, site_type, sess_id=""):
     session = requests.Session()
     session.headers.update({'user-agent': 'Mozilla/5.0 (Linux; Android 10)'})
-    url = f"https://claimfreecoins.io/{coin}-faucet/?r=arasarathinam3@gmail.com" if site_type == "free" else f"https://beefaucet.org/{coin}-faucet/?r=arasarathinam3@gmail.com"
+    url = f"https://claimfreecoins.io/{coin}-faucet/?r=arasarathinam3@gmail.com" if site_type == "free" else f"https://beefaucet.org/{coin}-faucet/?r=anilodhi2019@gmail.com"
     if site_type == "bee": session.cookies.update({'PHPSESSID': sess_id})
 
     try:
@@ -110,10 +110,13 @@ def claim_process(coin, email, token, site_type, sess_id=""):
         if s_token:
             payload = {'session-token': s_token.group(1), 'address': email, 'captcha': 'recaptcha', 'g-recaptcha-response': token, 'login': 'Verify Captcha'}
             post_res = session.post(url, data=payload, timeout=15)
-            if "satoshi was sent" in post_res.text:
-                amt = re.search(r'(\d+) satoshi', post_res.text)
+            body = post_res.text.lower()
+            if "satoshi was sent" in body:
+                amt = re.search(r'(\d+) satoshi', body)
                 val = amt.group(1) if amt else "?"
                 return f"{G}CLAIM SUCCESSFUL {W}⚡ {Y}{val} Sat{W}"
+            if "invalid captcha" in body: return f"{R}INVALID CAPTCHA{W}"
+            if "cloudflare" in body: return f"{R}CLOUDFLARE BLOCK{W}"
         return f"{R}SYSTEM REJECTED{W}"
     except: return f"{R}ERROR{W}"
 
