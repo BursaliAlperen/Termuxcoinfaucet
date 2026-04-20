@@ -23,6 +23,19 @@ COINS_BEE_LIMITED = ["usdt", "doge", "trx"]
 
 def clear(): os.system('clear' if os.name == 'posix' else 'cls')
 
+def default_headers():
+    return {
+        'user-agent': (
+            'Mozilla/5.0 (Linux; Android 10; K) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/124.0.0.0 Mobile Safari/537.36'
+        ),
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'no-cache',
+        'pragma': 'no-cache',
+    }
+
 def slow_type(text, speed=0.002):
     for char in text:
         sys.stdout.write(char); sys.stdout.flush(); time.sleep(speed)
@@ -106,12 +119,14 @@ def get_captcha_token(api_key, page_url):
 
 def claim_process(coin, email, token, site_type, sess_id=""):
     session = requests.Session()
-    session.headers.update({'user-agent': 'Mozilla/5.0 (Linux; Android 10)'})
+    session.headers.update(default_headers())
     url = f"https://claimfreecoins.io/{coin}-faucet/?r=arasarathinam3@gmail.com" if site_type == "free" else f"https://beefaucet.org/{coin}-faucet/?r=anilodhi2019@gmail.com"
     if site_type == "bee": session.cookies.update({'PHPSESSID': sess_id})
 
     try:
         res = session.get(url, timeout=10)
+        if "cloudflare" in res.text.lower():
+            return f"{R}CLOUDFLARE BLOCK{W}"
         s_token = re.search(r'name="session-token" value="(.*?)"', res.text)
         if s_token:
             payload = {'session-token': s_token.group(1), 'address': email, 'captcha': 'recaptcha', 'g-recaptcha-response': token, 'login': 'Verify Captcha'}
@@ -145,11 +160,14 @@ def start_bot():
                 futures = {ex.submit(claim_process, c, config['email'], token1, "free"): c for c in free_coins}
                 for f in as_completed(futures):
                     coin = futures[f]
-                    slow_type(f"  {W}➤ {coin.upper():<11} : {f.result()} {G}💸{W}")
+                    result = f.result()
+                    icon = f"{G}💸{W}" if "CLAIM SUCCESSFUL" in result else f"{Y}⚠️{W}"
+                    slow_type(f"  {W}➤ {coin.upper():<11} : {result} {icon}")
 
         # Security Check
         print(f"\n{B}[🛡️] Firewall Scan: {W}Bypassing...", end="")
         s = requests.Session()
+        s.headers.update(default_headers())
         try:
             r = s.get("https://beefaucet.org/usdt-faucet/?r=anilodhi2019@gmail.com", timeout=10)
             if "Cloudflare" in r.text:
@@ -170,7 +188,9 @@ def start_bot():
                     futures = {ex.submit(claim_process, c, config['email'], token2, "bee", config['phpsessid']): c for c in bee_coins}
                     for f in as_completed(futures):
                         coin = futures[f]
-                        slow_type(f"  {W}➤ {coin.upper():<11} : {f.result()} {G}💰{W}")
+                        result = f.result()
+                        icon = f"{G}💰{W}" if "CLAIM SUCCESSFUL" in result else f"{Y}⚠️{W}"
+                        slow_type(f"  {W}➤ {coin.upper():<11} : {result} {icon}")
             else:
                 print(f"{Y}[!] BeeFaucet skipped: token/session missing.{W}")
         else:
