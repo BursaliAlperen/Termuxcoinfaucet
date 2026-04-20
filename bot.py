@@ -43,25 +43,26 @@ def slow_type(text, speed=0.002):
 
 def banner(cycle=0, active_network="IDLE", email="N/A", mode=FREE_MODE):
     clear()
-    line = f"{C}{'═' * 72}{W}"
+    line = f"{C}{'━' * 78}{W}"
     print(line)
-    print(f"{G} ██████╗  ██████╗ ████████╗    ██╗      ██████╗ ███╗   ██╗███████╗██╗  ██╗{W}")
-    print(f"{G} ██╔══██╗██╔═══██╗╚══██╔══╝    ██║     ██╔═══██╗████╗  ██║██╔════╝╚██╗██╔╝{W}")
-    print(f"{G} ██████╔╝██║   ██║   ██║       ██║     ██║   ██║██╔██╗ ██║█████╗   ╚███╔╝ {W}")
-    print(f"{G} ██╔══██╗██║   ██║   ██║       ██║     ██║   ██║██║╚██╗██║██╔══╝   ██╔██╗ {W}")
-    print(f"{G} ██████╔╝╚██████╔╝   ██║       ███████╗╚██████╔╝██║ ╚████║███████╗██╔╝ ██╗{W}")
-    print(f"{G} ╚═════╝  ╚═════╝    ╚═╝       ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝{W}")
+    print(f"{M}██╗     ███╗   ██╗██╗  ██╗   ███████╗ ██████╗ ██████╗  ██████╗ ███████╗{W}")
+    print(f"{M}██║     ████╗  ██║╚██╗██╔╝   ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██╔════╝{W}")
+    print(f"{M}██║     ██╔██╗ ██║ ╚███╔╝    █████╗  ██║   ██║██████╔╝██║  ███╗█████╗  {W}")
+    print(f"{M}██║     ██║╚██╗██║ ██╔██╗    ██╔══╝  ██║   ██║██╔══██╗██║   ██║██╔══╝  {W}")
+    print(f"{M}███████╗██║ ╚████║██╔╝ ██╗   ██║     ╚██████╔╝██║  ██║╚██████╔╝███████╗{W}")
+    print(f"{M}╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝   ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚══════╝{W}")
     print(line)
     print(
-        f"{B}● MODE:{W} {G}{mode.upper()}{W}   "
-        f"{B}● CYCLE:{W} {Y}{cycle}{W}   "
-        f"{B}● NETWORK:{W} {M}{active_network}{W}"
+        f"{B}◉ PROFILE:{W} {G}CUSTOM STYLE{W}   "
+        f"{B}◉ MODE:{W} {Y}{mode.upper()}{W}   "
+        f"{B}◉ CYCLE:{W} {C}{cycle}{W}"
     )
     print(
-        f"{B}● USER:{W} {C}{email}{W}   "
-        f"{B}● STATUS:{W} {G}ONLINE{W}   "
-        f"{B}● TIME:{W} {Y}{time.strftime('%H:%M:%S')}{W}"
+        f"{B}◉ TARGET:{W} {C}{email}{W}   "
+        f"{B}◉ ACTIVE NET:{W} {M}{active_network}{W}   "
+        f"{B}◉ CLOCK:{W} {Y}{time.strftime('%H:%M:%S')}{W}"
     )
+    print(f"{G}     \"Own your flow. Keep it clean, fast, and yours.\"{W}")
     print(line)
 
 def get_config():
@@ -150,12 +151,12 @@ def start_bot():
     cycle = 1
     while True:
         banner(cycle=cycle, active_network="BATCH START", email=config['email'], mode=mode)
-        print(f"{M}🌀 BATCH: #{cycle} STARTING...{W}\n")
+        print(f"{M}⟢ RUN #{cycle} INIT ⟣{W}\n")
 
         # --- SOURCE 1 ---
         token1 = get_captcha_token(config['api_key'], "https://claimfreecoins.io/tether-faucet/?r=arasarathinam3@gmail.com")
         if token1:
-            print(f"\n{C}🌐 NETWORK: {Y}ClaimFreeCoins.io ({mode.upper()}){W}")
+            print(f"\n{C}⚡ CHANNEL: {Y}ClaimFreeCoins.io [{mode.upper()}]{W}")
             with ThreadPoolExecutor(max_workers=5) as ex:
                 futures = {ex.submit(claim_process, c, config['email'], token1, "free"): c for c in free_coins}
                 for f in as_completed(futures):
@@ -165,16 +166,16 @@ def start_bot():
                     slow_type(f"  {W}➤ {coin.upper():<11} : {result} {icon}")
 
         # Security Check
-        print(f"\n{B}[🛡️] Firewall Scan: {W}Bypassing...", end="")
+        print(f"\n{B}[🛡️] Edge Shield Scan: {W}Checking...", end="")
         s = requests.Session()
         s.headers.update(default_headers())
         try:
             r = s.get("https://beefaucet.org/usdt-faucet/?r=anilodhi2019@gmail.com", timeout=10)
             if "Cloudflare" in r.text:
-                print(f"{R} [BLOCKED]{W}")
+                print(f"{R} [PROTECTED]{W}")
                 if not config.get('phpsessid'): manual_id = input(f"{C}➤ Enter PHPSESSID: {W}"); config['phpsessid'] = manual_id
             else:
-                print(f"{G} [CLEAR]{W}")
+                print(f"{G} [OPEN]{W}")
                 aid = s.cookies.get_dict().get('PHPSESSID')
                 if aid: config['phpsessid'] = aid
         except: pass
@@ -183,7 +184,7 @@ def start_bot():
         if enable_bee:
             token2 = get_captcha_token(config['api_key'], "https://beefaucet.org/usdt-faucet/?r=anilodhi2019@gmail.com")
             if token2 and config['phpsessid']:
-                print(f"\n{C}🐝 NETWORK: {Y}BeeFaucet.org ({mode.upper()}){W}")
+                print(f"\n{C}⚡ CHANNEL: {Y}BeeFaucet.org [{mode.upper()}]{W}")
                 with ThreadPoolExecutor(max_workers=5) as ex:
                     futures = {ex.submit(claim_process, c, config['email'], token2, "bee", config['phpsessid']): c for c in bee_coins}
                     for f in as_completed(futures):
@@ -192,13 +193,13 @@ def start_bot():
                         icon = f"{G}💰{W}" if "CLAIM SUCCESSFUL" in result else f"{Y}⚠️{W}"
                         slow_type(f"  {W}➤ {coin.upper():<11} : {result} {icon}")
             else:
-                print(f"{Y}[!] BeeFaucet skipped: token/session missing.{W}")
+                print(f"{Y}[!] BeeFaucet skipped: missing token/session.{W}")
         else:
-            print(f"{Y}[!] FREE mode: BeeFaucet disabled, limited faucet set active.{W}")
+            print(f"{Y}[!] FREE mode enabled: only core faucets active.{W}")
 
-        print(f"\n{G}✅ BATCH {cycle} PRINTING COMPLETED!{W}")
+        print(f"\n{G}✓ RUN {cycle} COMPLETED.{W}")
         for i in range(30, 0, -1):
-            sys.stdout.write(f"\r{B}⏳ System Re-Energizing: {R}{i}s {W}until next print...")
+            sys.stdout.write(f"\r{B}⏳ Cooldown:{W} {R}{i}s{W} until next run...")
             sys.stdout.flush(); time.sleep(1)
         cycle += 1
 
