@@ -13,9 +13,13 @@ G, R, Y, C, W, M, B = '\033[1;32m', '\033[1;31m', '\033[1;33m', '\033[1;36m', '\
 CONFIG_FILE = "config.json"
 SOLVER_URL = "http://157.180.15.203"
 SITE_KEY = "6LfwaSgTAAAAAJJNz6oAdimVHmIe3s4fHj4D0at4"
+FREE_MODE = "free"
+PAID_MODE = "paid"
 
 COINS_FREE = ["bitcoin", "ethereum", "tether", "bnb", "solana", "usdc", "ripple", "dogecoin", "tron", "toncoin", "bch", "cardano", "litecoin", "polygon", "monero", "stellar", "zcash", "dash", "digibyte", "feyorra"]
 COINS_BEE = ["eth", "usdt", "bnb", "sol", "usdc", "xrp", "doge", "trx", "ton", "bch", "ada", "ltc", "matic", "xmr", "xlm", "zec", "dash", "dgb", "fey", "btcb"]
+COINS_FREE_LIMITED = ["bitcoin", "tether", "dogecoin", "tron", "litecoin"]
+COINS_BEE_LIMITED = ["usdt", "doge", "trx"]
 
 def clear(): os.system('clear' if os.name == 'posix' else 'cls')
 
@@ -24,7 +28,7 @@ def slow_type(text, speed=0.002):
         sys.stdout.write(char); sys.stdout.flush(); time.sleep(speed)
     print()
 
-def banner(cycle=0, active_network="IDLE", email="N/A"):
+def banner(cycle=0, active_network="IDLE", email="N/A", mode=FREE_MODE):
     clear()
     line = f"{C}{'═' * 72}{W}"
     print(line)
@@ -36,7 +40,7 @@ def banner(cycle=0, active_network="IDLE", email="N/A"):
     print(f"{G} ╚═════╝  ╚═════╝    ╚═╝       ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝{W}")
     print(line)
     print(
-        f"{B}● MODE:{W} {G}OPEN (NO KEY SYSTEM){W}   "
+        f"{B}● MODE:{W} {G}{mode.upper()}{W}   "
         f"{B}● CYCLE:{W} {Y}{cycle}{W}   "
         f"{B}● NETWORK:{W} {M}{active_network}{W}"
     )
@@ -55,9 +59,16 @@ def get_config():
         print(f"{B}[?] {W}Configuring New User Details...")
         email = input(f"{C}➤ FaucetPay Email : {W}")
         api_key = input(f"{C}➤ xEvil API Key   : {W}")
-        data = {"email": email, "api_key": api_key, "phpsessid": ""}
+        mode_input = input(f"{C}➤ Mode (free/paid) [free]: {W}").strip().lower()
+        mode = PAID_MODE if mode_input == PAID_MODE else FREE_MODE
+        data = {"email": email, "api_key": api_key, "phpsessid": "", "mode": mode}
         with open(CONFIG_FILE, 'w') as f: json.dump(data, f)
         return data
+
+def get_mode_coin_sets(mode):
+    if mode == PAID_MODE:
+        return COINS_FREE, COINS_BEE, True
+    return COINS_FREE_LIMITED, COINS_BEE_LIMITED, False
 
 def get_captcha_token(api_key, page_url):
     sys.stdout.write(f"\r{Y}[⚡] Captcha Engine {W}➤ {C}PENETRATING...   ")
@@ -99,17 +110,21 @@ def claim_process(coin, email, token, site_type, sess_id=""):
 
 def start_bot():
     config = get_config()
+    mode = config.get("mode", FREE_MODE).lower()
+    if mode not in (FREE_MODE, PAID_MODE):
+        mode = FREE_MODE
+    free_coins, bee_coins, enable_bee = get_mode_coin_sets(mode)
     cycle = 1
     while True:
-        banner(cycle=cycle, active_network="BATCH START", email=config['email'])
+        banner(cycle=cycle, active_network="BATCH START", email=config['email'], mode=mode)
         print(f"{M}🌀 BATCH: #{cycle} STARTING...{W}\n")
 
         # --- SOURCE 1 ---
         token1 = get_captcha_token(config['api_key'], "https://claimfreecoins.io/tether-faucet/?r=arasarathinam3@gmail.com")
         if token1:
-            print(f"\n{C}🌐 NETWORK: {Y}ClaimFreeCoins.io{W}")
+            print(f"\n{C}🌐 NETWORK: {Y}ClaimFreeCoins.io ({mode.upper()}){W}")
             with ThreadPoolExecutor(max_workers=5) as ex:
-                futures = {ex.submit(claim_process, c, config['email'], token1, "free"): c for c in COINS_FREE}
+                futures = {ex.submit(claim_process, c, config['email'], token1, "free"): c for c in free_coins}
                 for f in as_completed(futures):
                     coin = futures[f]
                     slow_type(f"  {W}➤ {coin.upper():<11} : {f.result()} {G}💸{W}")
@@ -129,14 +144,19 @@ def start_bot():
         except: pass
 
         # --- SOURCE 2 ---
-        token2 = get_captcha_token(config['api_key'], "https://beefaucet.org/usdt-faucet/?r=anilodhi2019@gmail.com")
-        if token2 and config['phpsessid']:
-            print(f"\n{C}🐝 NETWORK: {Y}BeeFaucet.org{W}")
-            with ThreadPoolExecutor(max_workers=5) as ex:
-                futures = {ex.submit(claim_process, c, config['email'], token2, "bee", config['phpsessid']): c for c in COINS_BEE}
-                for f in as_completed(futures):
-                    coin = futures[f]
-                    slow_type(f"  {W}➤ {coin.upper():<11} : {f.result()} {G}💰{W}")
+        if enable_bee:
+            token2 = get_captcha_token(config['api_key'], "https://beefaucet.org/usdt-faucet/?r=anilodhi2019@gmail.com")
+            if token2 and config['phpsessid']:
+                print(f"\n{C}🐝 NETWORK: {Y}BeeFaucet.org ({mode.upper()}){W}")
+                with ThreadPoolExecutor(max_workers=5) as ex:
+                    futures = {ex.submit(claim_process, c, config['email'], token2, "bee", config['phpsessid']): c for c in bee_coins}
+                    for f in as_completed(futures):
+                        coin = futures[f]
+                        slow_type(f"  {W}➤ {coin.upper():<11} : {f.result()} {G}💰{W}")
+            else:
+                print(f"{Y}[!] BeeFaucet skipped: token/session missing.{W}")
+        else:
+            print(f"{Y}[!] FREE mode: BeeFaucet disabled, limited faucet set active.{W}")
 
         print(f"\n{G}✅ BATCH {cycle} PRINTING COMPLETED!{W}")
         for i in range(30, 0, -1):
