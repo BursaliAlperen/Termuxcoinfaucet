@@ -1,3 +1,6 @@
+import asyncio
+import getpass
+import importlib.util
 import json
 import os
 import re
@@ -18,29 +21,46 @@ C5 = "\033[38;5;196m"   # red neon
 WHITE = "\033[97m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
-LINE = f"{C1}{'━' * 65}{RESET}"
+LINE_WIDTH = 72
+LINE = f"{C1}{'━' * LINE_WIDTH}{RESET}"
 
 WORKING_PROVIDERS = ["monetag", "richads", "adsgram"]
 REQUEST_TIMEOUT = 20
 MAX_EMPTY_REFRESHES = 3
+TELEGRAM_BOT_USERNAME = os.getenv("NINOCOIN_TG_BOT", "TheOpenEarnBot")
+TELEGRAM_WEBAPP_URL = os.getenv("NINOCOIN_TG_WEBAPP_URL", "https://app.theopenearn.com/")
+TELEGRAM_SESSION = os.getenv("NINOCOIN_TG_SESSION", "ninocoin_telegram")
 
 # ======================= UI FUNCTIONS =======================
 def clear():
     os.system('clear' if os.name == 'posix' else 'cls')
 
 
+def center(text):
+    return text.center(LINE_WIDTH)
+
+
+def panel(title, lines):
+    print(LINE)
+    print(f"{C2}{BOLD}{center(title)}{RESET}")
+    print(LINE)
+    for line in lines:
+        print(line)
+    print(LINE)
+
+
 def banner():
     print(LINE)
     print(f"{C2}{BOLD}")
-    print(" ███╗   ██╗██╗███╗   ██╗ ██████╗  ██████╗ ██████╗ ██╗███╗   ██╗")
-    print(" ████╗  ██║██║████╗  ██║██╔═══██╗██╔════╝██╔═══██╗██║████╗  ██║")
-    print(" ██╔██╗ ██║██║██╔██╗ ██║██║   ██║██║     ██║   ██║██║██╔██╗ ██║")
-    print(" ██║╚██╗██║██║██║╚██╗██║██║   ██║██║     ██║   ██║██║██║╚██╗██║")
-    print(" ██║ ╚████║██║██║ ╚████║╚██████╔╝╚██████╗╚██████╔╝██║██║ ╚████║")
-    print(" ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝")
+    print("███╗   ██╗██╗███╗   ██╗ ██████╗  ██████╗ ██████╗ ██╗███╗   ██╗")
+    print("████╗  ██║██║████╗  ██║██╔═══██╗██╔════╝██╔═══██╗██║████╗  ██║")
+    print("██╔██╗ ██║██║██╔██╗ ██║██║   ██║██║     ██║   ██║██║██╔██╗ ██║")
+    print("██║╚██╗██║██║██║╚██╗██║██║   ██║██║     ██║   ██║██║██║╚██╗██║")
+    print("██║ ╚████║██║██║ ╚████║╚██████╔╝╚██████╗╚██████╔╝██║██║ ╚████║")
+    print("╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝")
     print(f"{RESET}")
     print(LINE)
-    print(f"{C4}👑 DEV: {WHITE}@NINOCOIN {C1}┃ {C2}🚀 TG: {WHITE}NINOCOIN {C1}┃ {C3}🎰 MODE: {WHITE}ADS")
+    print(f"{C4}👑 DEV: {WHITE}@NINOCOIN {C1}┃ {C2}🚀 TG: {WHITE}NINOCOIN {C1}┃ {C3}⚡ LOGIN: {WHITE}TELEGRAM")
     print(LINE)
 
 
@@ -135,12 +155,123 @@ class OpenEarnPro:
         return False
 
 
-def read_auth_input():
+def extract_auth_from_webview_url(webview_url):
+    parsed = urllib.parse.urlparse(webview_url)
+    for raw_part in (parsed.fragment, parsed.query, webview_url):
+        values = urllib.parse.parse_qs(raw_part).get("tgWebAppData")
+        if values:
+            return urllib.parse.unquote(values[0])
+        decoded_part = urllib.parse.unquote(raw_part)
+        if "query_id=" in decoded_part and "hash=" in decoded_part:
+            auth_data = decoded_part[decoded_part.index("query_id="):]
+            for marker in ("&tgWebAppVersion=", "&tgWebAppPlatform=", "&tgWebAppThemeParams="):
+                if marker in auth_data:
+                    auth_data = auth_data.split(marker, 1)[0]
+            return auth_data
+    return ""
+
+
+async def telegram_auth_from_phone(
+    api_id,
+    api_hash,
+    phone,
+    telegram_client_cls,
+    session_password_needed_error,
+    request_webview_request,
+):
+    client = telegram_client_cls(TELEGRAM_SESSION, int(api_id), api_hash)
+    await client.connect()
+    try:
+        if not await client.is_user_authorized():
+            await client.send_code_request(phone)
+            code = input(f"{C2}Telegram kodunu gir: {RESET}").strip().replace(" ", "")
+            try:
+                await client.sign_in(phone=phone, code=code)
+            except session_password_needed_error:
+                password = getpass.getpass(f"{C2}Telegram 2FA şifresi varsa gir: {RESET}")
+                await client.sign_in(password=password)
+
+        bot_entity = await client.get_entity(TELEGRAM_BOT_USERNAME)
+        webview = await client(
+            request_webview_request(
+                peer=bot_entity,
+                bot=bot_entity,
+                platform="ios",
+                from_bot_menu=True,
+                url=TELEGRAM_WEBAPP_URL,
+            )
+        )
+        auth_data = extract_auth_from_webview_url(webview.url)
+        if not auth_data:
+            raise RuntimeError("Telegram WebApp auth verisi alınamadı.")
+        return auth_data
+    finally:
+        await client.disconnect()
+
+
+def read_manual_auth_input():
     while True:
         auth_input = input(f"{C1}Paste Auth / Query ID: {RESET}").strip()
         if auth_input:
             return auth_input
         print(f"{C5}❌ Auth / Query ID boş olamaz. Tekrar deneyin.{RESET}")
+
+
+def read_telegram_login_input():
+    if importlib.util.find_spec("telethon") is None:
+        panel(
+            "TELEGRAM MODÜLÜ EKSİK",
+            [
+                f"{C5}❌ Telethon kurulu değil; telefon ile otomatik bağlanılamaz.{RESET}",
+                f"{C3}➜ Kurulum: {WHITE}python3 -m pip install telethon{RESET}",
+                f"{C3}➜ Şimdilik manuel Query/Auth girişine geçiliyor.{RESET}",
+            ],
+        )
+        return read_manual_auth_input()
+
+    from telethon import TelegramClient
+    from telethon.errors import SessionPasswordNeededError
+    from telethon.functions.messages import RequestWebViewRequest
+
+    api_id = os.getenv("NINOCOIN_API_ID") or input(f"{C1}Telegram API ID: {RESET}").strip()
+    api_hash = os.getenv("NINOCOIN_API_HASH") or getpass.getpass(f"{C1}Telegram API HASH: {RESET}").strip()
+    phone = input(f"{C1}Telefon numarası (+90...): {RESET}").strip()
+
+    if not api_id or not api_hash or not phone:
+        print(f"{C5}❌ API ID, API HASH ve telefon boş olamaz.{RESET}")
+        return read_manual_auth_input()
+
+    print(f"{C3}⏳ Telegram bağlanıyor, gelen kodu girmen istenecek...{RESET}")
+    try:
+        return asyncio.run(
+            telegram_auth_from_phone(
+                api_id,
+                api_hash,
+                phone,
+                TelegramClient,
+                SessionPasswordNeededError,
+                RequestWebViewRequest,
+            )
+        )
+    except Exception as exc:
+        print(f"{C5}❌ Telegram bağlantısı başarısız: {exc}{RESET}")
+        print(f"{C3}➜ Manuel Query/Auth girişine geçiliyor.{RESET}")
+        return read_manual_auth_input()
+
+
+def read_auth_input():
+    panel(
+        "NINOCOIN GİRİŞ",
+        [
+            f"{C4}[1]{WHITE} Telegram telefon + gelen kod ile bağlan {C3}(önerilen){RESET}",
+            f"{C4}[2]{WHITE} Query/Auth manuel yapıştır {RESET}",
+            f"{C1}Bot: {WHITE}@{TELEGRAM_BOT_USERNAME} {C1}┃ WebApp: {WHITE}{TELEGRAM_WEBAPP_URL}{RESET}",
+        ],
+    )
+    choice = input(f"{C2}Seçim [1/2]: {RESET}").strip() or "1"
+    if choice == "2":
+        return read_manual_auth_input()
+    return read_telegram_login_input()
 
 
 # ======================= MAIN LOOP =======================
@@ -159,7 +290,7 @@ def main():
         if not user or not status:
             empty_refreshes += 1
             if empty_refreshes >= MAX_EMPTY_REFRESHES:
-                print(f"{C5}❌ Query/Auth çalışmadı veya süresi doldu. Yeni Query ID girin.{RESET}")
+                print(f"{C5}❌ Bağlantı/Auth çalışmadı veya süresi doldu. Yeniden giriş yapın.{RESET}")
                 bot = OpenEarnPro(read_auth_input())
                 empty_refreshes = 0
             else:
