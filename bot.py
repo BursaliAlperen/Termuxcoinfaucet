@@ -34,7 +34,7 @@ TELEGRAM_SESSION = os.getenv("NINOCOIN_TG_SESSION", "ninocoin_telegram")
 TELEGRAM_API_ID = os.getenv("NINOCOIN_API_ID", "26025122")
 TELEGRAM_API_HASH = os.getenv("NINOCOIN_API_HASH", "9c832a240c0ba7cd4b01189ee35a6c59")
 TELEGRAM_PHONE = os.getenv("NINOCOIN_PHONE", "+905518951725")
-AUTO_TELEGRAM_LOGIN = os.getenv("NINOCOIN_AUTO_LOGIN", "1") != "0"
+TELEGRAM_LOGIN_RETRY_DELAY = 5
 
 # ======================= UI FUNCTIONS =======================
 def clear():
@@ -193,6 +193,48 @@ def extract_auth_from_webview_url(webview_url):
     return ""
 
 
+async def prepare_bot_for_webview(client, bot_entity):
+    try:
+        from telethon.tl.functions.contacts import UnblockRequest
+        await client(UnblockRequest(bot_entity))
+        print(f"{C4}✅ @{TELEGRAM_BOT_USERNAME} unblock kontrolü tamam.{RESET}")
+    except Exception:
+        pass
+
+    try:
+        await client.send_message(bot_entity, "/start")
+        await asyncio.sleep(1)
+    except Exception:
+        pass
+
+
+async def request_webview(client, bot_entity, request_webview_request):
+    try:
+        return await client(
+            request_webview_request(
+                peer=bot_entity,
+                bot=bot_entity,
+                platform="ios",
+                from_bot_menu=True,
+                url=TELEGRAM_WEBAPP_URL,
+            )
+        )
+    except Exception as exc:
+        if "blocked this user" not in str(exc).lower():
+            raise
+        print(f"{C3}⚠️ Bot engelli görünüyor, otomatik unblock + /start deneniyor...{RESET}")
+        await prepare_bot_for_webview(client, bot_entity)
+        return await client(
+            request_webview_request(
+                peer=bot_entity,
+                bot=bot_entity,
+                platform="ios",
+                from_bot_menu=True,
+                url=TELEGRAM_WEBAPP_URL,
+            )
+        )
+
+
 async def telegram_auth_from_phone(
     api_id,
     api_hash,
@@ -210,33 +252,21 @@ async def telegram_auth_from_phone(
             try:
                 await client.sign_in(phone=phone, code=code)
             except session_password_needed_error:
-                password = getpass.getpass(f"{C2}Telegram 2FA şifresi varsa gir: {RESET}")
+                print(f"{C3}🔐 Telegram 2FA algılandı.{RESET}")
+                password = getpass.getpass(f"{C2}Telegram 2FA şifresi: {RESET}")
                 await client.sign_in(password=password)
+        else:
+            print(f"{C4}✅ Telegram session hazır, kod gerekmedi.{RESET}")
 
         bot_entity = await client.get_entity(TELEGRAM_BOT_USERNAME)
-        webview = await client(
-            request_webview_request(
-                peer=bot_entity,
-                bot=bot_entity,
-                platform="ios",
-                from_bot_menu=True,
-                url=TELEGRAM_WEBAPP_URL,
-            )
-        )
+        await prepare_bot_for_webview(client, bot_entity)
+        webview = await request_webview(client, bot_entity, request_webview_request)
         auth_data = extract_auth_from_webview_url(webview.url)
         if not auth_data:
             raise RuntimeError("Telegram WebApp auth verisi alınamadı.")
         return auth_data
     finally:
         await client.disconnect()
-
-
-def read_manual_auth_input():
-    while True:
-        auth_input = input(f"{C1}Paste Auth / Query ID: {RESET}").strip()
-        if auth_input:
-            return auth_input
-        print(f"{C5}❌ Auth / Query ID boş olamaz. Tekrar deneyin.{RESET}")
 
 
 def get_request_webview_request():
@@ -265,61 +295,50 @@ def read_telegram_login_input():
             [
                 f"{C5}❌ {exc}{RESET}",
                 f"{C3}➜ Kur/Güncelle: {WHITE}python3 -m pip install -U telethon{RESET}",
-                f"{C3}➜ Şimdilik manuel Query/Auth girişine geçiliyor.{RESET}",
+                f"{C5}Query/Auth fallback kapalı; Telethon düzelmeden devam edilmez.{RESET}",
             ],
         )
-        return read_manual_auth_input()
+        sys.exit(1)
 
-    api_id = TELEGRAM_API_ID or input(f"{C1}Telegram API ID: {RESET}").strip()
-    api_hash = TELEGRAM_API_HASH or getpass.getpass(f"{C1}Telegram API HASH: {RESET}").strip()
-    phone = TELEGRAM_PHONE or input(f"{C1}Telefon numarası (+90...): {RESET}").strip()
+    api_id = TELEGRAM_API_ID
+    api_hash = TELEGRAM_API_HASH
+    phone = TELEGRAM_PHONE
 
     if not api_id or not api_hash or not phone:
         print(f"{C5}❌ API ID, API HASH ve telefon boş olamaz.{RESET}")
-        return read_manual_auth_input()
+        sys.exit(1)
 
-    print(f"{C4}✅ Kayıtlı Telegram bilgileri kullanılıyor: {WHITE}{mask_value(phone)}{RESET}")
-    print(f"{C3}⏳ Telegram bağlanıyor; sadece gelen kodu girmen yeterli...{RESET}")
-    try:
-        return asyncio.run(
-            telegram_auth_from_phone(
-                api_id,
-                api_hash,
-                phone,
-                TelegramClient,
-                SessionPasswordNeededError,
-                RequestWebViewRequest,
+    while True:
+        print(f"{C4}✅ Kayıtlı Telegram bilgileri kullanılıyor: {WHITE}{mask_value(phone)}{RESET}")
+        print(f"{C3}⏳ Telegram bağlanıyor; kod gelirse gir, 2FA varsa otomatik algılanacak...{RESET}")
+        try:
+            return asyncio.run(
+                telegram_auth_from_phone(
+                    api_id,
+                    api_hash,
+                    phone,
+                    TelegramClient,
+                    SessionPasswordNeededError,
+                    RequestWebViewRequest,
+                )
             )
-        )
-    except Exception as exc:
-        print(f"{C5}❌ Telegram bağlantısı başarısız: {exc}{RESET}")
-        print(f"{C3}➜ Manuel Query/Auth girişine geçiliyor.{RESET}")
-        return read_manual_auth_input()
+        except KeyboardInterrupt:
+            raise
+        except Exception as exc:
+            print(f"{C5}❌ Telegram bağlantısı başarısız: {exc}{RESET}")
+            print(f"{C3}⏳ Query/Auth'a geçilmeyecek. {TELEGRAM_LOGIN_RETRY_DELAY}s sonra tekrar denenecek...{RESET}")
+            time.sleep(TELEGRAM_LOGIN_RETRY_DELAY)
 
 
 def read_auth_input():
-    if AUTO_TELEGRAM_LOGIN:
-        panel(
-            "NINOCOIN OTO GİRİŞ",
-            [
-                f"{C4}✅ Telegram API ve telefon otomatik dolduruldu.{RESET}",
-                f"{C1}Telefon: {WHITE}{mask_value(TELEGRAM_PHONE)} {C1}┃ Bot: {WHITE}@{TELEGRAM_BOT_USERNAME}{RESET}",
-                f"{C3}İpucu: Manuel Query/Auth için {WHITE}NINOCOIN_AUTO_LOGIN=0 python3 bot.py{RESET}",
-            ],
-        )
-        return read_telegram_login_input()
-
     panel(
-        "NINOCOIN GİRİŞ",
+        "NINOCOIN OTO GİRİŞ",
         [
-            f"{C4}[1]{WHITE} Telegram telefon + gelen kod ile bağlan {C3}(önerilen){RESET}",
-            f"{C4}[2]{WHITE} Query/Auth manuel yapıştır {RESET}",
-            f"{C1}Bot: {WHITE}@{TELEGRAM_BOT_USERNAME} {C1}┃ WebApp: {WHITE}{TELEGRAM_WEBAPP_URL}{RESET}",
+            f"{C4}✅ Telegram API ve telefon otomatik dolduruldu.{RESET}",
+            f"{C1}Telefon: {WHITE}{mask_value(TELEGRAM_PHONE)} {C1}┃ Bot: {WHITE}@{TELEGRAM_BOT_USERNAME}{RESET}",
+            f"{C3}Query/Auth fallback kapalı; bot sadece Telegram ile giriş yapacak.{RESET}",
         ],
     )
-    choice = input(f"{C2}Seçim [1/2]: {RESET}").strip() or "1"
-    if choice == "2":
-        return read_manual_auth_input()
     return read_telegram_login_input()
 
 
