@@ -34,8 +34,8 @@ REQUEST_TIMEOUT = 25
 INIT_TIMEOUT = 45
 RETRY_ATTEMPTS = 5
 RETRY_BASE_DELAY = 8
-SERVER_WAIT_DELAY = 60
-SERVER_WAIT_CYCLES = 6
+SERVER_WAIT_DELAY = 180
+SERVER_WAIT_CYCLES = 0  # 0 = keep retrying every SERVER_WAIT_DELAY seconds until the server recovers.
 TRANSIENT_STATUS_CODES = {500, 502, 503, 504, 520, 522, 524}
 UI_WIDTH = 62
 
@@ -106,6 +106,16 @@ def is_transient_status(status_code):
     return status_code in TRANSIENT_STATUS_CODES
 
 
+def server_wait_exceeded(cycle):
+    return SERVER_WAIT_CYCLES > 0 and cycle > SERVER_WAIT_CYCLES
+
+
+def server_wait_label(cycle):
+    if SERVER_WAIT_CYCLES > 0:
+        return f"{cycle}/{SERVER_WAIT_CYCLES}"
+    return f"{cycle}/∞"
+
+
 def set_account_status(user, msg=None, percent=None, bal=None, detail=None):
     ACCOUNTS_STATUS.setdefault(
         user,
@@ -133,7 +143,7 @@ def banner():
     print_box_row(f"{BOLD}                 C O I N  •  NİNOCOIN", C)
     print_box_row("", M)
     print(box_line())
-    print_box_row("APP: NİNOCOIN • SOURCE: TheOpenEarn • KEY: OFF • VER: 1.1.2", G)
+    print_box_row("APP: NİNOCOIN • SOURCE: TheOpenEarn • KEY: OFF • VER: 1.1.3", G)
     print(box_line("╚", "═", "╝"))
 
 
@@ -287,7 +297,7 @@ class OpenEarnEngine:
         self.update_status(
             "Server Wait",
             95,
-            detail=f"{label}: server {status_code}. Waiting {SERVER_WAIT_DELAY}s ({cycle}/{SERVER_WAIT_CYCLES})",
+            detail=f"{label}: server {status_code}. 5/5 done; retrying in {SERVER_WAIT_DELAY // 60} min ({server_wait_label(cycle)})",
         )
         await asyncio.sleep(SERVER_WAIT_DELAY)
 
@@ -305,7 +315,7 @@ class OpenEarnEngine:
                 status_code, user_data = await self.request_json("GET", f"{BASE_URL}/user", label="Balance", headers=self.headers)
                 if is_transient_status(status_code):
                     server_cycles += 1
-                    if server_cycles > SERVER_WAIT_CYCLES:
+                    if server_wait_exceeded(server_cycles):
                         self.update_status("Server Down", 100, detail=f"Balance still returns {status_code}: {short_payload(user_data)}")
                         break
                     await self.wait_for_server("Balance", status_code, user_data, server_cycles)
@@ -318,7 +328,7 @@ class OpenEarnEngine:
                 status_code, status = await self.request_json("GET", f"{BASE_URL}/ads/daily-status", label="Ads status", headers=self.headers)
                 if is_transient_status(status_code):
                     server_cycles += 1
-                    if server_cycles > SERVER_WAIT_CYCLES:
+                    if server_wait_exceeded(server_cycles):
                         self.update_status("Server Down", 100, detail=f"Ads status still returns {status_code}: {short_payload(status)}")
                         break
                     await self.wait_for_server("Ads status", status_code, status, server_cycles)
@@ -375,7 +385,7 @@ class OpenEarnEngine:
                 )
                 if is_transient_status(status_code):
                     server_cycles += 1
-                    if server_cycles > SERVER_WAIT_CYCLES:
+                    if server_wait_exceeded(server_cycles):
                         self.update_status("Server Down", 100, detail=f"Ad complete still returns {status_code}: {short_payload(result)}")
                         break
                     await self.wait_for_server("Ad complete", status_code, result, server_cycles)
@@ -415,7 +425,7 @@ class OpenEarnEngine:
                     continue
                 if is_transient_status(status_code):
                     server_cycles += 1
-                    if server_cycles > SERVER_WAIT_CYCLES:
+                    if server_wait_exceeded(server_cycles):
                         self.update_status("Server Down", 100, detail=f"Tap still returns {status_code}: {short_payload(data)}")
                         break
                     await self.wait_for_server("Tap", status_code, data, server_cycles)
@@ -442,30 +452,38 @@ class OpenEarnEngine:
 
     async def run_spin(self):
         self.update_status("Spinning", 10, detail="Trying daily wheel spin")
-        try:
-            status_code, result = await self.request_json(
-                "POST",
-                f"{BASE_URL}/wheel/spin",
-                label="Wheel",
-                headers=self.headers,
-                json={"is_paid": False},
-            )
-            if is_transient_status(status_code):
-                await self.wait_for_server("Wheel", status_code, result, 1)
-                self.update_status("Spin Skip", 100, detail="Wheel skipped because server is temporarily unavailable")
+        server_cycles = 0
+        while True:
+            try:
+                status_code, result = await self.request_json(
+                    "POST",
+                    f"{BASE_URL}/wheel/spin",
+                    label="Wheel",
+                    headers=self.headers,
+                    json={"is_paid": False},
+                )
+                if is_transient_status(status_code):
+                    server_cycles += 1
+                    if server_wait_exceeded(server_cycles):
+                        self.update_status("Server Down", 100, detail=f"Wheel still returns {status_code}: {short_payload(result)}")
+                        return
+                    await self.wait_for_server("Wheel", status_code, result, server_cycles)
+                    continue
+                if status_code >= 400:
+                    self.update_status("Spin Error", 100, detail=f"wheel returned {status_code}: {short_payload(result)}")
+                    return
+                if result.get("success"):
+                    _status_code, user_data = await self.request_json("GET", f"{BASE_URL}/user", label="Balance", headers=self.headers)
+                    self.update_status("Spin Done", 100, user_data.get("balance"), "Wheel spin completed")
+                else:
+                    self.update_status("Spin Skip", 100, detail=str(result)[:160])
                 return
-            if status_code >= 400:
-                self.update_status("Spin Error", 100, detail=f"wheel returned {status_code}: {short_payload(result)}")
+            except requests.RequestException as exc:
+                self.update_status("Net Error", 100, detail=str(exc)[:160])
                 return
-            if result.get("success"):
-                _status_code, user_data = await self.request_json("GET", f"{BASE_URL}/user", label="Balance", headers=self.headers)
-                self.update_status("Spin Done", 100, user_data.get("balance"), "Wheel spin completed")
-            else:
-                self.update_status("Spin Skip", 100, detail=str(result)[:160])
-        except requests.RequestException as exc:
-            self.update_status("Net Error", 100, detail=str(exc)[:160])
-        except Exception as exc:
-            self.update_status("Spin Error", 100, detail=str(exc)[:160])
+            except Exception as exc:
+                self.update_status("Spin Error", 100, detail=str(exc)[:160])
+                return
 
 
 async def start_account(sess_path, sess_name, mode):
