@@ -25,11 +25,10 @@ TERM_WIDTH = shutil.get_terminal_size((60, 20)).columns
 LINE_WIDTH = max(46, min(60, TERM_WIDTH))
 LINE = f"{C1}{'━' * LINE_WIDTH}{RESET}"
 
-# Sadece ödüllü (rewarded) sağlayıcılar hedefleniyor
 WORKING_PROVIDERS = ["monetag", "richads", "adsgram"]
-REQUEST_TIMEOUT = 30 # Sunucu yüküne karşı 20'den 30'a çıkarıldı
+REQUEST_TIMEOUT = 30 
 MAX_EMPTY_REFRESHES = 3
-MAX_RETRIES = 3 # 502 ve Timeout'lar için maksimum tekrar sayısı
+MAX_RETRIES = 3 
 TELEGRAM_BOT_USERNAME = os.getenv("NINOCOIN_TG_BOT", "TheOpenEarnBot")
 TELEGRAM_WEBAPP_URL = os.getenv("NINOCOIN_TG_WEBAPP_URL", "https://app.theopenearn.com/")
 TELEGRAM_SESSION = os.getenv("NINOCOIN_TG_SESSION", "ninocoin_telegram")
@@ -105,10 +104,12 @@ class OpenEarnPro:
         self.auth = normalize_auth(auth)
         self.session = requests.Session()
         self.user_id = self.extract_user_id()
+        self.last_status_code = 200 # Hata türünü takip etmek için eklendi
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Telegram-iOS/10.9.1',
             'Authorization': self.auth,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
         }
 
     def extract_user_id(self):
@@ -122,19 +123,19 @@ class OpenEarnPro:
             return "7330965002"
 
     def request_with_retry(self, method, url, retries=MAX_RETRIES, base_delay=2, **kwargs):
-        """Dinamik backoff ile gelişmiş ağ istek yöneticisi (502 ve Timeout korumalı)"""
         for i in range(1, retries + 1):
             try:
                 response = self.session.request(method, url, headers=self.headers, timeout=REQUEST_TIMEOUT, **kwargs)
+                self.last_status_code = response.status_code
                 if response.status_code in [502, 503, 504]:
                     print(f"\n{C3}⚠️ Sunucu hatası ({response.status_code}). Yeniden deneniyor ({i}/{retries})...{RESET}")
                 else:
                     return response
             except (requests.ConnectionError, requests.Timeout) as e:
+                self.last_status_code = 0
                 print(f"\n{C3}⚠️ Ağ/Zaman Aşımı. Yeniden deneniyor ({i}/{retries})...{RESET}")
             
             if i < retries:
-                # Exponential backoff: 2s, 4s, 8s bekleme
                 time.sleep(base_delay * (2 ** (i - 1)))
         return None
 
@@ -258,7 +259,6 @@ async def telegram_auth_from_phone(
                 await client.sign_in(phone=phone, code=code)
             except session_password_needed_error:
                 print(f"{C3}🔐 Telegram 2FA algılandı.{RESET}")
-                # SORUN ÇÖZÜMÜ: getpass() yerine standart input() kullanılarak şifrenin görünür olması sağlandı.
                 password = input(f"{C2}Telegram 2FA şifresi (GÖRÜNÜR YAZILACAKTIR): {RESET}")
                 await client.sign_in(password=password)
         else:
@@ -357,16 +357,30 @@ def main():
     while True:
         user = bot.get_data("https://app.theopenearn.com/api/user")
         status = bot.get_data("https://app.theopenearn.com/api/ads/daily-status")
+        
+        # AKILLI HATA YÖNETİMİ BURADA BAŞLIYOR
         if not user or not status:
-            empty_refreshes += 1
-            if empty_refreshes >= MAX_EMPTY_REFRESHES:
-                print(f"{C5}❌ Bağlantı/Auth çalışmadı veya süresi doldu. Yeniden giriş yapın.{RESET}")
+            if bot.last_status_code in [500, 502, 503, 504]:
+                print(f"{C3}⏳ Sunucu aşırı yüklü veya bakımda (Hata {bot.last_status_code}). 30 saniye bekleniyor...{RESET}")
+                time.sleep(30)
+            elif bot.last_status_code in [401, 403]:
+                print(f"{C5}❌ Oturum süresi dolmuş veya geçersiz (Hata {bot.last_status_code}). Yeniden giriş yapılıyor...{RESET}")
                 bot = OpenEarnPro(read_auth_input())
                 empty_refreshes = 0
+            elif bot.last_status_code == 0:
+                print(f"{C3}⏳ İnternet bağlantısı veya ağ zaman aşımı sorunu. 15 saniye bekleniyor...{RESET}")
+                time.sleep(15)
             else:
-                print(f"{C3}⏳ Veri alınamadı, tekrar deneniyor ({empty_refreshes}/{MAX_EMPTY_REFRESHES})...{RESET}")
-                time.sleep(5)
+                empty_refreshes += 1
+                if empty_refreshes >= MAX_EMPTY_REFRESHES:
+                    print(f"{C5}❌ Bilinmeyen bir sorun nedeniyle veri alınamıyor. Yeniden giriş yapılıyor...{RESET}")
+                    bot = OpenEarnPro(read_auth_input())
+                    empty_refreshes = 0
+                else:
+                    print(f"{C3}⏳ Veri alınamadı, tekrar deneniyor ({empty_refreshes}/{MAX_EMPTY_REFRESHES})...{RESET}")
+                    time.sleep(5)
             continue
+        
         empty_refreshes = 0
 
         if start_bal == 0.0:
