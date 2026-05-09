@@ -31,6 +31,10 @@ MAX_EMPTY_REFRESHES = 3
 TELEGRAM_BOT_USERNAME = os.getenv("NINOCOIN_TG_BOT", "TheOpenEarnBot")
 TELEGRAM_WEBAPP_URL = os.getenv("NINOCOIN_TG_WEBAPP_URL", "https://app.theopenearn.com/")
 TELEGRAM_SESSION = os.getenv("NINOCOIN_TG_SESSION", "ninocoin_telegram")
+TELEGRAM_API_ID = os.getenv("NINOCOIN_API_ID", "26025122")
+TELEGRAM_API_HASH = os.getenv("NINOCOIN_API_HASH", "9c832a240c0ba7cd4b01189ee35a6c59")
+TELEGRAM_PHONE = os.getenv("NINOCOIN_PHONE", "+905518951725")
+AUTO_TELEGRAM_LOGIN = os.getenv("NINOCOIN_AUTO_LOGIN", "1") != "0"
 
 # ======================= UI FUNCTIONS =======================
 def clear():
@@ -48,6 +52,14 @@ def panel(title, lines):
     for line in lines:
         print(line)
     print(LINE)
+
+
+def mask_value(value, visible_start=4, visible_end=3):
+    if not value:
+        return "-"
+    if len(value) <= visible_start + visible_end:
+        return "*" * len(value)
+    return f"{value[:visible_start]}{'*' * (len(value) - visible_start - visible_end)}{value[-visible_end:]}"
 
 
 def banner():
@@ -258,15 +270,16 @@ def read_telegram_login_input():
         )
         return read_manual_auth_input()
 
-    api_id = os.getenv("NINOCOIN_API_ID") or input(f"{C1}Telegram API ID: {RESET}").strip()
-    api_hash = os.getenv("NINOCOIN_API_HASH") or getpass.getpass(f"{C1}Telegram API HASH: {RESET}").strip()
-    phone = input(f"{C1}Telefon numarası (+90...): {RESET}").strip()
+    api_id = TELEGRAM_API_ID or input(f"{C1}Telegram API ID: {RESET}").strip()
+    api_hash = TELEGRAM_API_HASH or getpass.getpass(f"{C1}Telegram API HASH: {RESET}").strip()
+    phone = TELEGRAM_PHONE or input(f"{C1}Telefon numarası (+90...): {RESET}").strip()
 
     if not api_id or not api_hash or not phone:
         print(f"{C5}❌ API ID, API HASH ve telefon boş olamaz.{RESET}")
         return read_manual_auth_input()
 
-    print(f"{C3}⏳ Telegram bağlanıyor, gelen kodu girmen istenecek...{RESET}")
+    print(f"{C4}✅ Kayıtlı Telegram bilgileri kullanılıyor: {WHITE}{mask_value(phone)}{RESET}")
+    print(f"{C3}⏳ Telegram bağlanıyor; sadece gelen kodu girmen yeterli...{RESET}")
     try:
         return asyncio.run(
             telegram_auth_from_phone(
@@ -285,6 +298,17 @@ def read_telegram_login_input():
 
 
 def read_auth_input():
+    if AUTO_TELEGRAM_LOGIN:
+        panel(
+            "NINOCOIN OTO GİRİŞ",
+            [
+                f"{C4}✅ Telegram API ve telefon otomatik dolduruldu.{RESET}",
+                f"{C1}Telefon: {WHITE}{mask_value(TELEGRAM_PHONE)} {C1}┃ Bot: {WHITE}@{TELEGRAM_BOT_USERNAME}{RESET}",
+                f"{C3}İpucu: Manuel Query/Auth için {WHITE}NINOCOIN_AUTO_LOGIN=0 python3 bot.py{RESET}",
+            ],
+        )
+        return read_telegram_login_input()
+
     panel(
         "NINOCOIN GİRİŞ",
         [
