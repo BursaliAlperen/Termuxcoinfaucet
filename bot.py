@@ -32,6 +32,11 @@ BASE_URL = "https://app.theopenearn.com/api"
 SESSION_DIR = "sessions"
 REQUEST_TIMEOUT = 25
 INIT_TIMEOUT = 45
+RETRY_ATTEMPTS = 5
+RETRY_BASE_DELAY = 8
+SERVER_WAIT_DELAY = 60
+SERVER_WAIT_CYCLES = 6
+TRANSIENT_STATUS_CODES = {500, 502, 503, 504, 520, 522, 524}
 UI_WIDTH = 62
 
 os.makedirs(SESSION_DIR, exist_ok=True)
@@ -87,6 +92,20 @@ def spinner(tick):
     return ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"][tick % 10]
 
 
+def short_payload(payload, limit=130):
+    if isinstance(payload, dict):
+        text = payload.get("message") or payload.get("error") or payload.get("raw") or str(payload)
+    else:
+        text = str(payload)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit] or "No response body"
+
+
+def is_transient_status(status_code):
+    return status_code in TRANSIENT_STATUS_CODES
+
+
 def set_account_status(user, msg=None, percent=None, bal=None, detail=None):
     ACCOUNTS_STATUS.setdefault(
         user,
@@ -114,7 +133,7 @@ def banner():
     print_box_row(f"{BOLD}                 C O I N  •  NİNOCOIN", C)
     print_box_row("", M)
     print(box_line())
-    print_box_row("APP: NİNOCOIN • SOURCE: TheOpenEarn • KEY: OFF • VER: 1.1.1", G)
+    print_box_row("APP: NİNOCOIN • SOURCE: TheOpenEarn • KEY: OFF • VER: 1.1.2", G)
     print(box_line("╚", "═", "╝"))
 
 
@@ -140,7 +159,7 @@ def dashboard(tick=0, footer="Running"):
                 f"{str(data.get('bal', '0.00'))[:9]:>9}"
             )
             color = G
-            if any(word in data.get("msg", "") for word in ["Fail", "Error", "Timeout", "Net"]):
+            if any(word in data.get("msg", "") for word in ["Fail", "Error", "Timeout", "Net", "Down"]):
                 color = R
             elif data.get("msg") in ["Done", "Completed", "No Ads", "Tap Done", "Ads Done"]:
                 color = C
@@ -216,7 +235,7 @@ class OpenEarnEngine:
         set_account_status(self.username, "Starting", 8, "0.00", "Session connected")
 
     def update_status(self, msg=None, percent=None, bal=None, detail=None):
-        if msg and any(word in msg for word in ["Error", "Fail", "Timeout", "Net"]):
+        if msg and any(word in msg for word in ["Error", "Fail", "Timeout", "Net", "Down"]):
             self.failed = True
         set_account_status(self.username, msg, percent, bal, detail)
 
@@ -226,11 +245,51 @@ class OpenEarnEngine:
         try:
             payload = response.json()
         except ValueError:
-            payload = {"raw": response.text[:160]}
+            payload = {"raw": response.text[:300]}
         return response.status_code, payload
 
-    async def request_json(self, method, url, **kwargs):
-        return await asyncio.to_thread(self._request_json_sync, method, url, **kwargs)
+    async def request_json(self, method, url, label="API", retry=True, **kwargs):
+        attempts = RETRY_ATTEMPTS if retry else 1
+        last_status = None
+        last_payload = {}
+        for attempt in range(1, attempts + 1):
+            try:
+                status_code, payload = await asyncio.to_thread(self._request_json_sync, method, url, **kwargs)
+            except requests.RequestException as exc:
+                last_status = 0
+                last_payload = {"error": str(exc)}
+                if attempt >= attempts:
+                    raise
+                delay = RETRY_BASE_DELAY * attempt
+                self.update_status(
+                    "Retrying",
+                    min(95, 15 + attempt * 12),
+                    detail=f"{label}: network issue, retry {attempt}/{attempts} in {delay}s",
+                )
+                await asyncio.sleep(delay)
+                continue
+
+            last_status, last_payload = status_code, payload
+            if not retry or not is_transient_status(status_code) or attempt >= attempts:
+                return status_code, payload
+
+            delay = RETRY_BASE_DELAY * attempt
+            self.update_status(
+                "Server Busy",
+                min(95, 15 + attempt * 12),
+                detail=f"{label}: server {status_code}, retry {attempt}/{attempts} in {delay}s",
+            )
+            await asyncio.sleep(delay)
+
+        return last_status, last_payload
+
+    async def wait_for_server(self, label, status_code, payload, cycle):
+        self.update_status(
+            "Server Wait",
+            95,
+            detail=f"{label}: server {status_code}. Waiting {SERVER_WAIT_DELAY}s ({cycle}/{SERVER_WAIT_CYCLES})",
+        )
+        await asyncio.sleep(SERVER_WAIT_DELAY)
 
     async def wait_linear(self, duration, msg, detail=None):
         self.update_status(msg=msg, detail=detail)
@@ -240,19 +299,35 @@ class OpenEarnEngine:
 
     async def run_ads(self):
         self.update_status("Ads Check", 10, detail="Daily ad status is being checked")
+        server_cycles = 0
         while True:
             try:
-                status_code, user_data = await self.request_json("GET", f"{BASE_URL}/user", headers=self.headers)
+                status_code, user_data = await self.request_json("GET", f"{BASE_URL}/user", label="Balance", headers=self.headers)
+                if is_transient_status(status_code):
+                    server_cycles += 1
+                    if server_cycles > SERVER_WAIT_CYCLES:
+                        self.update_status("Server Down", 100, detail=f"Balance still returns {status_code}: {short_payload(user_data)}")
+                        break
+                    await self.wait_for_server("Balance", status_code, user_data, server_cycles)
+                    continue
                 if status_code >= 400:
-                    self.update_status("HTTP Error", 100, detail=f"/user returned {status_code}: {user_data}")
+                    self.update_status("HTTP Error", 100, detail=f"/user returned {status_code}: {short_payload(user_data)}")
                     break
                 self.update_status(bal=user_data.get("balance", "0"))
 
-                status_code, status = await self.request_json("GET", f"{BASE_URL}/ads/daily-status", headers=self.headers)
+                status_code, status = await self.request_json("GET", f"{BASE_URL}/ads/daily-status", label="Ads status", headers=self.headers)
+                if is_transient_status(status_code):
+                    server_cycles += 1
+                    if server_cycles > SERVER_WAIT_CYCLES:
+                        self.update_status("Server Down", 100, detail=f"Ads status still returns {status_code}: {short_payload(status)}")
+                        break
+                    await self.wait_for_server("Ads status", status_code, status, server_cycles)
+                    continue
                 if status_code >= 400:
-                    self.update_status("Ads Error", 100, detail=f"daily-status returned {status_code}: {status}")
+                    self.update_status("Ads Error", 100, detail=f"daily-status returned {status_code}: {short_payload(status)}")
                     break
 
+                server_cycles = 0
                 if status.get("remaining", 0) == 0:
                     self.update_status("Ads Done", 100, detail="No remaining ads for today")
                     break
@@ -287,18 +362,26 @@ class OpenEarnEngine:
                         f"https://e8ys.com/500/10719545?oaid={oaid}"
                         f"&tgp=ios&sdkp=1&var_3={self.user_id}&sw_version=v1.801.0"
                     )
-                    status_code, monetag = await self.request_json("GET", monetag_url, headers=self.headers)
+                    status_code, monetag = await self.request_json("GET", monetag_url, label="Monetag", headers=self.headers)
                     if status_code < 400 and monetag.get("ruid"):
                         await self.request_json("GET", f"https://e8ys.com/resolve?ruid={monetag['ruid']}", headers=self.headers)
 
                 status_code, result = await self.request_json(
                     "POST",
                     f"{BASE_URL}/ads/complete",
+                    label="Ad complete",
                     json={"ad_type": "video", "provider": name, "watched": True},
                     headers=self.headers,
                 )
+                if is_transient_status(status_code):
+                    server_cycles += 1
+                    if server_cycles > SERVER_WAIT_CYCLES:
+                        self.update_status("Server Down", 100, detail=f"Ad complete still returns {status_code}: {short_payload(result)}")
+                        break
+                    await self.wait_for_server("Ad complete", status_code, result, server_cycles)
+                    continue
                 if status_code >= 400:
-                    self.update_status("Ad Error", 100, detail=f"complete returned {status_code}: {result}")
+                    self.update_status("Ad Error", 100, detail=f"complete returned {status_code}: {short_payload(result)}")
                     break
                 if result.get("success"):
                     self.update_status("Ad Success", 100, result.get("new_balance"), f"{name} completed")
@@ -316,11 +399,13 @@ class OpenEarnEngine:
 
     async def run_tapper(self):
         self.update_status("Tapping", 0, detail="Tap cycle started")
+        server_cycles = 0
         while True:
             try:
                 status_code, data = await self.request_json(
                     "POST",
                     f"{BASE_URL}/earn",
+                    label="Tap",
                     headers=self.headers,
                     json={"taps": 1},
                 )
@@ -328,10 +413,18 @@ class OpenEarnEngine:
                     self.update_status("Rate Limit", 25, detail="Waiting 65 seconds")
                     await asyncio.sleep(65)
                     continue
+                if is_transient_status(status_code):
+                    server_cycles += 1
+                    if server_cycles > SERVER_WAIT_CYCLES:
+                        self.update_status("Server Down", 100, detail=f"Tap still returns {status_code}: {short_payload(data)}")
+                        break
+                    await self.wait_for_server("Tap", status_code, data, server_cycles)
+                    continue
                 if status_code >= 400:
-                    self.update_status("Tap Error", 100, detail=f"earn returned {status_code}: {data}")
+                    self.update_status("Tap Error", 100, detail=f"earn returned {status_code}: {short_payload(data)}")
                     break
 
+                server_cycles = 0
                 if data.get("balance"):
                     self.update_status(bal=data["balance"])
                 if data.get("cycle_complete") or data.get("cooldown_until"):
@@ -353,14 +446,19 @@ class OpenEarnEngine:
             status_code, result = await self.request_json(
                 "POST",
                 f"{BASE_URL}/wheel/spin",
+                label="Wheel",
                 headers=self.headers,
                 json={"is_paid": False},
             )
+            if is_transient_status(status_code):
+                await self.wait_for_server("Wheel", status_code, result, 1)
+                self.update_status("Spin Skip", 100, detail="Wheel skipped because server is temporarily unavailable")
+                return
             if status_code >= 400:
-                self.update_status("Spin Error", 100, detail=f"wheel returned {status_code}: {result}")
+                self.update_status("Spin Error", 100, detail=f"wheel returned {status_code}: {short_payload(result)}")
                 return
             if result.get("success"):
-                _status_code, user_data = await self.request_json("GET", f"{BASE_URL}/user", headers=self.headers)
+                _status_code, user_data = await self.request_json("GET", f"{BASE_URL}/user", label="Balance", headers=self.headers)
                 self.update_status("Spin Done", 100, user_data.get("balance"), "Wheel spin completed")
             else:
                 self.update_status("Spin Skip", 100, detail=str(result)[:160])
