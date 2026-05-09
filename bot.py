@@ -27,12 +27,12 @@ TERM_WIDTH = shutil.get_terminal_size((60, 20)).columns
 LINE_WIDTH = max(46, min(60, TERM_WIDTH))
 LINE = f"{C1}{'━' * LINE_WIDTH}{RESET}"
 
-# RichAds öncelikli olacak şekilde güncellendi
+# RichAds öncelikli olacak şekilde
 WORKING_PROVIDERS = ["richads", "monetag", "adsgram"]
 REQUEST_TIMEOUT = 20
 MAX_EMPTY_REFRESHES = 3
 
-# TonexaSpinBot altyapısına göre çevresel değişkenler güncellendi
+# TonexaSpinBot altyapısına göre çevresel değişkenler
 TELEGRAM_BOT_USERNAME = os.getenv("TONEXA_TG_BOT", "TonexaSpinBot")
 TELEGRAM_WEBAPP_URL = os.getenv("TONEXA_TG_WEBAPP_URL", "https://app.theopenearn.com/")
 TELEGRAM_SESSION = os.getenv("TONEXA_TG_SESSION", "tonexa_telegram")
@@ -115,7 +115,6 @@ class OpenEarnPro:
         }
 
     def _create_robust_session(self):
-        # Hatalara karşı otomatik retry mekanizması
         session = requests.Session()
         retry = Retry(
             total=3,
@@ -160,7 +159,6 @@ class OpenEarnPro:
             print(f"{C5}⚠️ API geçersiz JSON döndürdü: {url}{RESET}")
             return None
 
-    # --- MONETAG LOGIC ---
     def run_monetag_jacky(self):
         oaid = uuid.uuid4().hex
         manifest_url = f"https://e8ys.com/500/10719545?oaid={oaid}&tgp=ios&sdkp=1&var_3={self.user_id}&sw_version=v1.801.0"
@@ -216,7 +214,6 @@ def extract_auth_from_webview_url(webview_url):
 async def prepare_bot_for_webview(client, bot_username):
     try:
         from telethon.tl.functions.contacts import UnblockRequest
-        # get_input_entity kullanılarak ValueError hatalarının önüne geçildi
         bot_entity = await client.get_input_entity(bot_username)
         await client(UnblockRequest(bot_entity))
         print(f"{C4}✅ @{bot_username} unblock kontrolü tamam.{RESET}")
@@ -226,7 +223,7 @@ async def prepare_bot_for_webview(client, bot_username):
     try:
         bot_entity = await client.get_input_entity(bot_username)
         await client.send_message(bot_entity, "/start")
-        await asyncio.sleep(1.5) # Telegram API limitlerine karşı bekleme artırıldı
+        await asyncio.sleep(1.5) 
     except Exception as e:
         print(f"{C3}⚠️ Bot başlatma denemesi başarısız oldu (Hata önemsiz olabilir): {e}{RESET}")
 
@@ -285,19 +282,16 @@ async def telegram_auth_from_phone(api_id, api_hash, phone, telegram_client_cls,
 
 
 def get_request_webview_request():
+    # Hata veren RequestAppWebViewRequest denemesini tamamen kaldırdım.
+    # Sadece stabil ve bot parametresini destekleyen RequestWebViewRequest'i kullanıyoruz.
     try:
-        # Modern Telethon WebApp mantığı
-        from telethon.tl.functions.messages import RequestAppWebViewRequest
-        return RequestAppWebViewRequest
-    except ImportError:
-        try:
-            from telethon.tl.functions.messages import RequestWebViewRequest
-            return RequestWebViewRequest
-        except ImportError as exc:
-            raise RuntimeError(
-                "Telethon WebView desteği bulunamadı. "
-                "Lütfen 'python3 -m pip install -U telethon' ile güncelleyin."
-            ) from exc
+        from telethon.tl.functions.messages import RequestWebViewRequest
+        return RequestWebViewRequest
+    except ImportError as exc:
+        raise RuntimeError(
+            "Telethon WebView desteği bulunamadı. "
+            "Lütfen 'python3 -m pip install -U telethon' ile güncelleyin."
+        ) from exc
 
 
 def read_telegram_login_input():
@@ -327,7 +321,6 @@ def read_telegram_login_input():
         print(f"{C4}✅ Kayıtlı Telegram bilgileri kullanılıyor: {WHITE}{mask_value(phone)}{RESET}")
         print(f"{C3}⏳ Telegram bağlanıyor; kod gelirse gir, 2FA varsa otomatik algılanacak...{RESET}")
         try:
-            # Yeni bir event loop oluşturarak mevcut olası asyncio çakışmalarını izole ettik
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             return loop.run_until_complete(
@@ -472,7 +465,6 @@ def main():
 
 if __name__ == "__main__":
     try:
-        # Windows işletim sistemlerinde Asyncio RuntimeError'ı engellemek için eklendi
         if sys.platform == 'win32':
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         main()
