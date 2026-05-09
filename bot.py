@@ -1,8 +1,8 @@
 import asyncio
 import getpass
-import importlib.util
 import json
 import os
+import shutil
 import re
 import sys
 import time
@@ -21,7 +21,8 @@ C5 = "\033[38;5;196m"   # red neon
 WHITE = "\033[97m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
-LINE_WIDTH = 72
+TERM_WIDTH = shutil.get_terminal_size((60, 20)).columns
+LINE_WIDTH = max(46, min(60, TERM_WIDTH))
 LINE = f"{C1}{'━' * LINE_WIDTH}{RESET}"
 
 WORKING_PROVIDERS = ["monetag", "richads", "adsgram"]
@@ -52,15 +53,24 @@ def panel(title, lines):
 def banner():
     print(LINE)
     print(f"{C2}{BOLD}")
-    print("███╗   ██╗██╗███╗   ██╗ ██████╗  ██████╗ ██████╗ ██╗███╗   ██╗")
-    print("████╗  ██║██║████╗  ██║██╔═══██╗██╔════╝██╔═══██╗██║████╗  ██║")
-    print("██╔██╗ ██║██║██╔██╗ ██║██║   ██║██║     ██║   ██║██║██╔██╗ ██║")
-    print("██║╚██╗██║██║██║╚██╗██║██║   ██║██║     ██║   ██║██║██║╚██╗██║")
-    print("██║ ╚████║██║██║ ╚████║╚██████╔╝╚██████╗╚██████╔╝██║██║ ╚████║")
-    print("╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝")
+    if LINE_WIDTH < 60:
+        print(center("███╗   ██╗██╗███╗   ██╗ ██████╗"))
+        print(center("████╗  ██║██║████╗  ██║██╔═══██╗"))
+        print(center("██╔██╗ ██║██║██╔██╗ ██║██║   ██║"))
+        print(center("██║╚██╗██║██║██║╚██╗██║██║   ██║"))
+        print(center("██║ ╚████║██║██║ ╚████║╚██████╔╝"))
+        print(center("╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚═════╝"))
+        print(f"{WHITE}{BOLD}{center('NINOCOIN')}{RESET}")
+    else:
+        print("███╗   ██╗██╗███╗   ██╗ ██████╗ ██████╗ ██╗███╗   ██╗")
+        print("████╗  ██║██║████╗  ██║██╔════╝██╔═══██╗██║████╗  ██║")
+        print("██╔██╗ ██║██║██╔██╗ ██║██║     ██║   ██║██║██╔██╗ ██║")
+        print("██║╚██╗██║██║██║╚██╗██║██║     ██║   ██║██║██║╚██╗██║")
+        print("██║ ╚████║██║██║ ╚████║╚██████╗╚██████╔╝██║██║ ╚████║")
+        print("╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝")
     print(f"{RESET}")
     print(LINE)
-    print(f"{C4}👑 DEV: {WHITE}@NINOCOIN {C1}┃ {C2}🚀 TG: {WHITE}NINOCOIN {C1}┃ {C3}⚡ LOGIN: {WHITE}TELEGRAM")
+    print(f"{C4}👑 DEV: {WHITE}@NINOCOIN {C1}┃ {C3}⚡ LOGIN: {WHITE}TELEGRAM{RESET}")
     print(LINE)
 
 
@@ -70,7 +80,7 @@ def running_timer(seconds, msg):
         sys.stdout.flush()
         time.sleep(1)
         seconds -= 1
-    sys.stdout.write("\r" + " " * 65 + "\r")
+    sys.stdout.write("\r" + " " * LINE_WIDTH + "\r")
 
 
 def normalize_auth(auth):
@@ -217,21 +227,36 @@ def read_manual_auth_input():
         print(f"{C5}❌ Auth / Query ID boş olamaz. Tekrar deneyin.{RESET}")
 
 
+def get_request_webview_request():
+    try:
+        from telethon.tl.functions.messages import RequestWebViewRequest
+        return RequestWebViewRequest
+    except ImportError:
+        try:
+            from telethon.tl.functions.messages import RequestAppWebViewRequest
+            return RequestAppWebViewRequest
+        except ImportError as exc:
+            raise RuntimeError(
+                "Telethon WebView desteği bulunamadı. "
+                "Lütfen 'python3 -m pip install -U telethon' ile güncelleyin."
+            ) from exc
+
+
 def read_telegram_login_input():
-    if importlib.util.find_spec("telethon") is None:
+    try:
+        from telethon import TelegramClient
+        from telethon.errors import SessionPasswordNeededError
+        RequestWebViewRequest = get_request_webview_request()
+    except (ImportError, RuntimeError) as exc:
         panel(
-            "TELEGRAM MODÜLÜ EKSİK",
+            "TELEGRAM MODÜLÜ HAZIR DEĞİL",
             [
-                f"{C5}❌ Telethon kurulu değil; telefon ile otomatik bağlanılamaz.{RESET}",
-                f"{C3}➜ Kurulum: {WHITE}python3 -m pip install telethon{RESET}",
+                f"{C5}❌ {exc}{RESET}",
+                f"{C3}➜ Kur/Güncelle: {WHITE}python3 -m pip install -U telethon{RESET}",
                 f"{C3}➜ Şimdilik manuel Query/Auth girişine geçiliyor.{RESET}",
             ],
         )
         return read_manual_auth_input()
-
-    from telethon import TelegramClient
-    from telethon.errors import SessionPasswordNeededError
-    from telethon.functions.messages import RequestWebViewRequest
 
     api_id = os.getenv("NINOCOIN_API_ID") or input(f"{C1}Telegram API ID: {RESET}").strip()
     api_hash = os.getenv("NINOCOIN_API_HASH") or getpass.getpass(f"{C1}Telegram API HASH: {RESET}").strip()
