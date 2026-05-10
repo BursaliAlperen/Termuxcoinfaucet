@@ -1,4 +1,5 @@
 import asyncio
+import importlib.util
 import json
 import os
 import random
@@ -37,6 +38,10 @@ RETRY_BASE_DELAY = 8
 SERVER_WAIT_DELAY = 180
 SERVER_WAIT_CYCLES = 0  # 0 = keep retrying every SERVER_WAIT_DELAY seconds until the server recovers.
 TRANSIENT_STATUS_CODES = {500, 502, 503, 504, 520, 522, 524}
+PROXY_ENV_VAR = "NINOCOIN_PROXY"
+NETWORK_PROXY_URL = os.environ.get(PROXY_ENV_VAR, "").strip()
+REQUEST_PROXIES = {}
+TELETHON_PROXY = None
 UI_WIDTH = 62
 
 os.makedirs(SESSION_DIR, exist_ok=True)
@@ -92,6 +97,80 @@ def spinner(tick):
     return ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"][tick % 10]
 
 
+def normalize_proxy_url(proxy_url):
+    proxy_url = proxy_url.strip()
+    if not proxy_url:
+        return ""
+    if "://" in proxy_url:
+        return proxy_url
+    return f"http://{proxy_url}"
+
+
+def build_telethon_proxy(proxy_url):
+    if not proxy_url:
+        return None
+    parsed = urllib.parse.urlparse(proxy_url)
+    scheme = parsed.scheme.lower()
+    if scheme not in {"socks4", "socks5", "http", "https"}:
+        return None
+    if importlib.util.find_spec("socks") is None:
+        return None
+
+    socks = importlib.import_module("socks")
+    proxy_type = {
+        "socks4": socks.SOCKS4,
+        "socks5": socks.SOCKS5,
+        "http": socks.HTTP,
+        "https": socks.HTTP,
+    }[scheme]
+    username = urllib.parse.unquote(parsed.username) if parsed.username else None
+    password = urllib.parse.unquote(parsed.password) if parsed.password else None
+    return (proxy_type, parsed.hostname, parsed.port, True, username, password)
+
+
+def apply_proxy(proxy_url):
+    global NETWORK_PROXY_URL, REQUEST_PROXIES, TELETHON_PROXY
+    NETWORK_PROXY_URL = normalize_proxy_url(proxy_url)
+    REQUEST_PROXIES = {}
+    TELETHON_PROXY = None
+    if not NETWORK_PROXY_URL:
+        return "Device VPN / direct network"
+
+    parsed = urllib.parse.urlparse(NETWORK_PROXY_URL)
+    if not parsed.hostname or not parsed.port:
+        NETWORK_PROXY_URL = ""
+        return "Invalid proxy ignored"
+
+    REQUEST_PROXIES = {"http": NETWORK_PROXY_URL, "https": NETWORK_PROXY_URL}
+    TELETHON_PROXY = build_telethon_proxy(NETWORK_PROXY_URL)
+    if TELETHON_PROXY:
+        return f"Proxy enabled for API + Telegram: {parsed.scheme}://{parsed.hostname}:{parsed.port}"
+    return (
+        f"Proxy enabled for API: {parsed.scheme}://{parsed.hostname}:{parsed.port}. "
+        "Telegram will use device network; install PySocks for Telegram proxy."
+    )
+
+
+def make_telegram_client(session_path):
+    if TELETHON_PROXY:
+        return TelegramClient(session_path, API_ID, API_HASH, proxy=TELETHON_PROXY)
+    return TelegramClient(session_path, API_ID, API_HASH)
+
+
+def configure_proxy_interactive():
+    if NETWORK_PROXY_URL:
+        print(f"{G}[✓] {apply_proxy(NETWORK_PROXY_URL)}{RESET}")
+        return
+
+    print(f"{Y}[i] TR erişim sorunu varsa önce cihaz VPN'i aç. Bu durumda proxy boş bırak.{RESET}")
+    print(f"{Y}[i] Local proxy kullanacaksan örnek: http://127.0.0.1:8080 veya socks5://127.0.0.1:1080{RESET}")
+    try:
+        proxy_url = input(f"{G}[?] Proxy URL ({PROXY_ENV_VAR}) [Enter = VPN/direct]: {W}").strip()
+    except EOFError:
+        proxy_url = ""
+    print(f"{G}[✓] {apply_proxy(proxy_url)}{RESET}")
+
+
 def short_payload(payload, limit=130):
     if isinstance(payload, dict):
         text = payload.get("message") or payload.get("error") or payload.get("raw") or str(payload)
@@ -143,7 +222,7 @@ def banner():
     print_box_row(f"{BOLD}                 C O I N  •  NİNOCOIN", C)
     print_box_row("", M)
     print(box_line())
-    print_box_row("APP: NİNOCOIN • SOURCE: TheOpenEarn • KEY: OFF • VER: 1.1.3", G)
+    print_box_row("APP: NİNOCOIN • SOURCE: TheOpenEarn • KEY: OFF • VER: 1.1.4", G)
     print(box_line("╚", "═", "╝"))
 
 
@@ -194,14 +273,14 @@ async def dashboard_refresher(stop_event):
 async def create_session():
     phone = input(f"{G}[?] Phone (+...): {W}").strip()
     sess_name = phone.replace("+", "")
-    client = TelegramClient(os.path.join(SESSION_DIR, sess_name), API_ID, API_HASH)
+    client = make_telegram_client(os.path.join(SESSION_DIR, sess_name))
     await client.start(phone=lambda: phone)
     print(f"{G}[✓] Account Linked Successfully!{RESET}")
     await client.disconnect()
 
 
 async def get_init_data(session_path):
-    client = TelegramClient(session_path, API_ID, API_HASH)
+    client = make_telegram_client(session_path)
     await client.connect()
     try:
         bot = await client.get_input_entity(BOT_USER)
@@ -225,6 +304,8 @@ async def get_init_data(session_path):
 class OpenEarnEngine:
     def __init__(self, query_id, sess_name):
         self.session = requests.Session()
+        if REQUEST_PROXIES:
+            self.session.proxies.update(REQUEST_PROXIES)
         self.headers = {
             "Authorization": f"tma {query_id}",
             "Content-Type": "application/json",
@@ -517,6 +598,7 @@ async def main():
     clear_screen()
     banner()
     print(f"{G}[✓] NİNOCOIN key kontrolü kaldırıldı. Bot doğrudan başlıyor.{RESET}")
+    configure_proxy_interactive()
 
     while True:
         answer = input(f"{G}[?] Add more Telegram accounts? (y/n): {W}").strip().lower()
