@@ -37,7 +37,8 @@ RETRY_ATTEMPTS = 5
 RETRY_BASE_DELAY = 8
 SERVER_WAIT_DELAY = 180
 SERVER_WAIT_CYCLES = 0  # 0 = keep retrying every SERVER_WAIT_DELAY seconds until the server recovers.
-TRANSIENT_STATUS_CODES = {500, 502, 503, 504, 520, 522, 524}
+NETWORK_ERROR_STATUS = 0
+TRANSIENT_STATUS_CODES = {NETWORK_ERROR_STATUS, 500, 502, 503, 504, 520, 522, 524}
 PROXY_ENV_VAR = "NINOCOIN_PROXY"
 NETWORK_PROXY_URL = os.environ.get(PROXY_ENV_VAR, "").strip()
 REQUEST_PROXIES = {}
@@ -185,6 +186,18 @@ def is_transient_status(status_code):
     return status_code in TRANSIENT_STATUS_CODES
 
 
+def transport_issue_label(status_code):
+    if status_code == NETWORK_ERROR_STATUS:
+        return "network/VPN connection"
+    return f"server {status_code}"
+
+
+def recovery_hint(status_code):
+    if status_code == NETWORK_ERROR_STATUS:
+        return "VPN/proxy or internet is not reachable"
+    return "TheOpenEarn server is busy"
+
+
 def server_wait_exceeded(cycle):
     return SERVER_WAIT_CYCLES > 0 and cycle > SERVER_WAIT_CYCLES
 
@@ -222,7 +235,7 @@ def banner():
     print_box_row(f"{BOLD}                 C O I N  •  NİNOCOIN", C)
     print_box_row("", M)
     print(box_line())
-    print_box_row("APP: NİNOCOIN • SOURCE: TheOpenEarn • KEY: OFF • VER: 1.1.4", G)
+    print_box_row("APP: NİNOCOIN • SOURCE: TheOpenEarn • KEY: OFF • VER: 1.1.6", G)
     print(box_line("╚", "═", "╝"))
 
 
@@ -326,7 +339,7 @@ class OpenEarnEngine:
         set_account_status(self.username, "Starting", 8, "0.00", "Session connected")
 
     def update_status(self, msg=None, percent=None, bal=None, detail=None):
-        if msg and any(word in msg for word in ["Error", "Fail", "Timeout", "Net", "Down"]):
+        if msg and any(word in msg for word in ["Error", "Fail", "Timeout", "Down"]):
             self.failed = True
         set_account_status(self.username, msg, percent, bal, detail)
 
@@ -341,44 +354,42 @@ class OpenEarnEngine:
 
     async def request_json(self, method, url, label="API", retry=True, **kwargs):
         attempts = RETRY_ATTEMPTS if retry else 1
-        last_status = None
+        last_status = NETWORK_ERROR_STATUS
         last_payload = {}
         for attempt in range(1, attempts + 1):
             try:
                 status_code, payload = await asyncio.to_thread(self._request_json_sync, method, url, **kwargs)
             except requests.RequestException as exc:
-                last_status = 0
-                last_payload = {"error": str(exc)}
-                if attempt >= attempts:
-                    raise
-                delay = RETRY_BASE_DELAY * attempt
-                self.update_status(
-                    "Retrying",
-                    min(95, 15 + attempt * 12),
-                    detail=f"{label}: network issue, retry {attempt}/{attempts} in {delay}s",
-                )
-                await asyncio.sleep(delay)
-                continue
+                status_code = NETWORK_ERROR_STATUS
+                payload = {"error": str(exc)}
 
             last_status, last_payload = status_code, payload
             if not retry or not is_transient_status(status_code) or attempt >= attempts:
                 return status_code, payload
 
             delay = RETRY_BASE_DELAY * attempt
+            issue = transport_issue_label(status_code)
+            state = "Net Retry" if status_code == NETWORK_ERROR_STATUS else "Server Busy"
             self.update_status(
-                "Server Busy",
+                state,
                 min(95, 15 + attempt * 12),
-                detail=f"{label}: server {status_code}, retry {attempt}/{attempts} in {delay}s",
+                detail=f"{label}: {issue}, retry {attempt}/{attempts} in {delay}s - {short_payload(payload)}",
             )
             await asyncio.sleep(delay)
 
         return last_status, last_payload
 
     async def wait_for_server(self, label, status_code, payload, cycle):
+        issue = transport_issue_label(status_code)
+        hint = recovery_hint(status_code)
         self.update_status(
-            "Server Wait",
+            "Net Wait" if status_code == NETWORK_ERROR_STATUS else "Server Wait",
             95,
-            detail=f"{label}: server {status_code}. 5/5 done; retrying in {SERVER_WAIT_DELAY // 60} min ({server_wait_label(cycle)})",
+            detail=(
+                f"{label}: {issue}. 5/5 done; retrying in "
+                f"{SERVER_WAIT_DELAY // 60} min ({server_wait_label(cycle)}). "
+                f"{hint}: {short_payload(payload)}"
+            ),
         )
         await asyncio.sleep(SERVER_WAIT_DELAY)
 
