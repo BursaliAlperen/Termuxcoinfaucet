@@ -527,7 +527,7 @@ def CheckNetConnection() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════════
-#                              DRIVER SETUP
+#                              DRIVER SETUP  [DÜZELTİLDİ]
 # ═══════════════════════════════════════════════════════════════════════════════════
 
 def BanningOpti() -> ChromeOptions:
@@ -543,21 +543,34 @@ def BanningOpti() -> ChromeOptions:
     options.add_argument("--disable-extensions")
     options.add_argument("--window-size=360,640")
     options.add_argument("--user-agent=Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36")
+    # Termux'ta X11 olmadan çalışması için headless ekle
+    options.add_argument("--headless=new")
     return options
 
 
 def BanningDriver(user_agent: str = None) -> webdriver:
-    """Ban korumalı driver."""
+    """Ban korumalı driver. [DÜZELTİLDİ - chromedriver path eklendi]"""
     options = BanningOpti()
     if user_agent:
         options.add_argument(f"--user-agent={user_agent}")
     
     try:
-        driver = webdriver.Chrome(options=options)
+        # Termux chromedriver path'i
+        chromedriver_path = "/data/data/com.termux/files/usr/bin/chromedriver"
+        
+        if os.path.exists(chromedriver_path):
+            service = ChromeService(executable_path=chromedriver_path)
+            driver = webdriver.Chrome(service=service, options=options)
+        else:
+            # Fallback: Selenium Manager
+            driver = webdriver.Chrome(options=options)
+            
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         return driver
     except Exception as e:
         print(f"{Fore.RED}\t [ERROR]: Driver creation failed: {e}")
+        print(f"{Fore.YELLOW}\t [HINT]: chromedriver kurulu mu?")
+        print(f"{Fore.YELLOW}\t        'pkg install chromedriver' veya 'pkg install chromium'")
         sys.exit(1)
 
 
@@ -572,6 +585,8 @@ def opti() -> ChromeOptions:
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=360,640")
     options.add_argument("--user-agent=Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36")
+    # Termux'ta X11 olmadan çalışması için headless ekle
+    options.add_argument("--headless=new")
     return options
 
 
