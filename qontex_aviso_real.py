@@ -47,7 +47,8 @@ def print_banner():
     print(banner)
 
 class WaryonoCaptcha:
-    """Waryono.my.id API Entegrasyonu"""    def __init__(self, api_key):
+    """Waryono.my.id API Entegrasyonu"""    
+    def __init__(self, api_key):
         self.api_key = api_key
         self.base_url = "https://waryono.my.id"
 
@@ -95,13 +96,13 @@ class AvisoRealBot:
         self.claim_count = 0
         self.total_earned = 0.0
         self.task_log = []
-        self.driver = None
-            def setup_driver(self):
+        self.driver = None        
+    def setup_driver(self):
         """Termux için Chromium driver ayarları"""
         print(f"{Colors.OKBLUE}[*] Chromium başlatılıyor...{Colors.ENDC}")
         
         chrome_options = Options()
-        chrome_options.add_argument('--headless=new')  # Headless mod (ekran olmadan)
+        chrome_options.add_argument('--headless=new')
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
@@ -125,29 +126,26 @@ class AvisoRealBot:
             self.driver.get('https://aviso.bz/')
             time.sleep(3)
             
-            # Login formunu bul
             email_field = self.driver.find_element(By.NAME, 'login') or self.driver.find_element(By.CSS_SELECTOR, 'input[type="email"]')
             password_field = self.driver.find_element(By.NAME, 'password') or self.driver.find_element(By.CSS_SELECTOR, 'input[type="password"]')
             
             email_field.send_keys(self.email)
             password_field.send_keys(self.password)
             
-            # Submit butonu bul ve tıkla
             submit_btn = self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"], input[type="submit"], .btn-login')
             submit_btn.click()
             
             time.sleep(5)
             
-            # Başarılı giriş kontrolü
             if "logout" in self.driver.page_source.lower() or "balance" in self.driver.page_source.lower() or "Баланс" in self.driver.page_source:
                 print(f"{Colors.OKGREEN}[+] Giriş başarılı!{Colors.ENDC}")
                 return True
             else:
                 print(f"{Colors.FAIL}[!] Giriş başarısız.{Colors.ENDC}")
                 return False
-                        except Exception as e:
-            print(f"{Colors.FAIL}[!] Giriş Hatası: {e}{Colors.ENDC}")
-            return False
+                
+        except Exception as e:
+            print(f"{Colors.FAIL}[!] Giriş Hatası: {e}{Colors.ENDC}")            return False
 
     def get_youtube_tasks(self):
         """YouTube görevlerini bul"""
@@ -158,15 +156,11 @@ class AvisoRealBot:
             
             tasks = []
             
-            # "Просмотр видеоролика" içeren görevleri bul
             task_elements = self.driver.find_elements(By.XPATH, "//*[contains(text(), 'Просмотр видеоролика')]")
             
             for element in task_elements:
                 try:
-                    # Üst öğeyi bul (genellikle tr veya div)
                     parent = element.find_element(By.XPATH, "./ancestor::tr | ./ancestor::div[contains(@class, 'task')]")
-                    
-                    # Execute butonunu bul
                     execute_btn = parent.find_element(By.XPATH, ".//a[contains(@href, 'execute') or contains(@href, 'tasks-youtube')] | .//button[contains(@class, 'btn')]")
                     
                     if execute_btn:
@@ -177,7 +171,6 @@ class AvisoRealBot:
                 except:
                     continue
             
-            # Alternatif: "Выполнить" butonlarını bul
             if not tasks:
                 execute_buttons = self.driver.find_elements(By.XPATH, "//a[contains(text(), 'Выполнить')] | //button[contains(text(), 'Выполнить')]")
                 for btn in execute_buttons:
@@ -194,16 +187,14 @@ class AvisoRealBot:
             return []
 
     def execute_task(self, task):
-        """Tek bir görevi çalıştır"""        try:
+        """Tek bir görevi çalıştır"""
+        try:
             print(f"{Colors.OKCYAN}[*] Görev Çalıştırılıyor: {task.get('title')}{Colors.ENDC}")
             
-            # Göreve tıkla
             task['element'].click()
             time.sleep(5)
             
-            # Captcha kontrolü
-            try:
-                hcaptcha_div = self.driver.find_element(By.CSS_SELECTOR, '.h-captcha, div[data-sitekey]')
+            try:                hcaptcha_div = self.driver.find_element(By.CSS_SELECTOR, '.h-captcha, div[data-sitekey]')
                 site_key = hcaptcha_div.get_attribute('data-sitekey')
                 
                 if site_key:
@@ -211,27 +202,23 @@ class AvisoRealBot:
                     token = self.captcha_solver.solve_hcaptcha(site_key, self.driver.current_url)
                     
                     if token:
-                        # Token'ı JavaScript ile注入 et
                         self.driver.execute_script(f"""
                             document.querySelector('[name="h-captcha-response"]').value = '{token}';
                             document.querySelector('[name="h-captcha-response"]').dispatchEvent(new Event('change'));
                         """)
                         time.sleep(2)
                         
-                        # Form submit
                         self.driver.execute_script("document.querySelector('form').submit();")
                         time.sleep(5)
             except NoSuchElementException:
-                pass  # Captcha yok
+                pass
             
-            # YouTube iframe'i bul ve izle
             try:
                 iframe = self.driver.find_element(By.TAG_NAME, 'iframe')
                 yt_url = iframe.get_attribute('src')
                 
                 if yt_url and 'youtube' in yt_url:
                     print(f"{Colors.OKBLUE}[*] YouTube video izleniyor (15 saniye)...{Colors.ENDC}")
-                    # Yeni sekmede aç
                     self.driver.execute_script(f"window.open('{yt_url}', '_blank');")
                     self.driver.switch_to.window(self.driver.window_handles[-1])
                     time.sleep(15)
@@ -240,14 +227,12 @@ class AvisoRealBot:
             except:
                 pass
             
-            # "Подтвердить просмотр" butonunu bul
             try:
                 confirm_btn = self.driver.find_element(By.XPATH, "//a[contains(text(), 'Подтвердить просмотр')] | //button[contains(text(), 'Подтвердить просмотр')]")
-                confirm_btn.click()                time.sleep(3)
+                confirm_btn.click()
+                time.sleep(3)
                 
-                # Başarı kontrolü
                 if "Вы успешно выполнили задание!" in self.driver.page_source or "успешно" in self.driver.page_source.lower():
-                    # Ödül miktarını bul
                     reward_match = re.search(r'\+([\d\.]+)', self.driver.page_source)
                     reward = float(reward_match.group(1)) if reward_match else 0.02
                     
@@ -258,8 +243,7 @@ class AvisoRealBot:
                     self.task_log.append(f"[Task {self.claim_count}] | {status} | +{reward} RUB")
                     print(f"{Colors.OKGREEN}[+] {status} +{reward} RUB{Colors.ENDC}")
                     return True
-                else:
-                    print(f"{Colors.WARNING}[!] Onaylama başarısız.{Colors.ENDC}")
+                else:                    print(f"{Colors.WARNING}[!] Onaylama başarısız.{Colors.ENDC}")
                     return False
                     
             except NoSuchElementException:
@@ -292,7 +276,8 @@ class AvisoRealBot:
                 tasks = self.get_youtube_tasks()
                 if not tasks:
                     print(f"{Colors.WARNING}[*] Uygun görev yok. 60 saniye bekleniyor...{Colors.ENDC}")
-                    time.sleep(60)                    continue
+                    time.sleep(60)
+                    continue
                     
                 for task in tasks:
                     success = self.execute_task(task)
@@ -307,8 +292,7 @@ class AvisoRealBot:
         except KeyboardInterrupt:
             print(f"\n{Colors.WARNING}[*] Kullanıcı tarafından durduruldu.{Colors.ENDC}")
         finally:
-            if self.driver:
-                self.driver.quit()
+            if self.driver:                self.driver.quit()
                 print(f"{Colors.OKBLUE}[*] Tarayıcı kapatıldı.{Colors.ENDC}")
 
 def main():
