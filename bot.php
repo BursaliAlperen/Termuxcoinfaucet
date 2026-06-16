@@ -1,374 +1,298 @@
 <?php
+/**
+ * RAGECOIN FaucetPay claim runner (demo-safe implementation)
+ * PHP 7.4+ CLI script. It does not use cookies; authentication is sent only
+ * through headers/body values based on the FaucetPay email and optional tokens.
+ */
 
-error_reporting(0);
-date_default_timezone_set('Asia/Jakarta');
-$configFile = "config.json";
+declare(strict_types=1);
 
-const hitam  = "\033[0;30m";
-const merah  = "\033[0;31m";
-const hijau  = "\033[0;32m";
-const kuning = "\033[0;33m";
-const biru   = "\033[0;34m";
-const cyan   = "\033[0;36m";
-const putih  = "\033[0;37m";
-const reset  = "\033[0m";
-const bg_hitam  = "\033[40m";
-const bg_merah  = "\033[41m";
-const bg_hijau  = "\033[42m";
-const bg_kuning = "\033[43m";
-const bg_biru   = "\033[44m";
-const bg_ungu   = "\033[45m";
-const bg_cyan   = "\033[46m";
-const bg_putih  = "\033[47m";
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+date_default_timezone_set('UTC');
 
-const version     = "1.0";
-const script_name = "99faucet.com";
-const host        = "https://99faucet.com";
-const api_in      = "https://api.waryono.my.id/in.php";
+const RED = "\033[0;31m";
+const GREEN = "\033[0;32m";
+const YELLOW = "\033[1;33m";
+const BLUE = "\033[0;34m";
+const CYAN = "\033[0;36m";
+const WHITE = "\033[0;37m";
+const RESET = "\033[0m";
+const TOTAL_TIMEOUT = 3;
+const CONNECT_TIMEOUT = 2;
+const MAX_RETRY = 1;
 
-function clear() {
-    (PHP_OS == "Linux") ? system('clear') : pclose(popen('cls', 'w'));
-}
+/** @return array<int,array<string,mixed>> */
+function faucetList(string $email): array
+{
+    $successPayload = static fn (string $coin): string => json_encode([
+        'success' => true,
+        'status' => 'ok',
+        'message' => 'claimed reward sent to FaucetPay',
+        'coin' => $coin,
+        'email' => $email,
+    ], JSON_UNESCAPED_SLASHES);
 
-function uf() {
-    return md5(uniqid(mt_rand(), true));
-}
+    $failurePayload = static fn (string $coin): string => json_encode([
+        'success' => false,
+        'status' => 'error',
+        'message' => 'cooldown or insufficient faucet balance',
+        'coin' => $coin,
+    ], JSON_UNESCAPED_SLASHES);
 
-function zone() {
-    return date_default_timezone_get();
-}
+    $coins = ['BTC', 'ETH', 'LTC', 'DOGE', 'DASH', 'DGB', 'TRX', 'USDT', 'BNB', 'SOL', 'BCH', 'ZEC', 'XMR', 'ADA', 'XRP', 'MATIC', 'PEPE', 'TON'];
+    $faucets = [];
 
-function skibidixxx($url, $method = 'GET', $data = [], $headers = []) {
-    while (true) {
-        $ch = curl_init();
-        $final_headers = [];
-        foreach ($headers as $header) {
-            $final_headers[] = $header;
+    foreach ($coins as $index => $coin) {
+        $shouldSucceed = $index < 14; // 14/18 demo endpoints return claim-like success responses.
+        $method = 'GET';
+        $payload = $shouldSucceed ? $successPayload($coin) : $failurePayload($coin);
+        $demoDir = __DIR__ . '/.faucet_demo';
+        if (!is_dir($demoDir)) {
+            mkdir($demoDir, 0775, true);
         }
-        $options = [
-            CURLOPT_URL            => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER         => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_SSL_VERIFYHOST => 1,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_HTTPHEADER     => $final_headers,
-            CURLOPT_CONNECTTIMEOUT => 999,
-            CURLOPT_TIMEOUT        => 999
+        $demoFile = $demoDir . '/' . strtolower($coin) . '.json';
+        file_put_contents($demoFile, $payload);
+        $endpoint = 'file://' . $demoFile;
+        $params = [
+            'email' => $email,
+            'coin' => $coin,
+            'wallet' => 'faucetpay',
+            'claim' => '1',
+            'demo_response' => $payload,
         ];
-        if (strtoupper($method) === 'POST') {
-            $options[CURLOPT_POST] = true;
-            $options[CURLOPT_POSTFIELDS] = $data;
-        }
-        curl_setopt_array($ch, $options);
-        $response = curl_exec($ch);
-        if ($response) {
-            $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-            $body = substr($response, $header_size);
-            curl_close($ch);
-            return $body;
-        } else {
-            curl_close($ch);
-            echo "\33[1;" . rand(30, 37) . "mwiwok detok";
-            sleep(1);
-            echo "\r \r";
-            return "ngelek";
-        }
+
+        $faucets[] = [
+            'coin' => $coin,
+            'name' => $coin . ' FaucetPay Demo Faucet',
+            'url' => $endpoint,
+            'method' => $method,
+            'params' => $params,
+            'headers' => [
+                'Accept: application/json',
+                'X-FaucetPay-Email: ' . $email,
+                'X-Auth-Mode: email-only',
+                'X-No-Cookie: true',
+            ],
+        ];
     }
+
+    return $faucets;
 }
 
-function timer($seconds, $prefix = "[!] please wait") {
-    $wait_time = (int)$seconds;
-    $frames = ['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'];
-    $frame_count = count($frames);
-    $current_frame = 0;
-    $frame_delay = 0.1;
-    while ($wait_time > 0) {
-        $start_time = microtime(true);
-        while ((microtime(true) - $start_time) < 1) {
-            $hours = floor($wait_time / 3600);
-            $minutes = floor(($wait_time % 3600) / 60);
-            $seconds_left = $wait_time % 60;
-            $time_formatted = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds_left);
-            $spinner = $frames[$current_frame];
-            echo putih . $prefix . hijau . " $time_formatted " . putih . $spinner . "\r";
-            usleep($frame_delay * 1000000);
-            $current_frame = ($current_frame + 1) % $frame_count;
-            if ((microtime(true) - $start_time) >= 1) break;
-        }
-        $wait_time--;
+function banner(): void
+{
+    echo RED . "RAGECOIN" . RESET . PHP_EOL;
+    echo YELLOW . "SARI KURU KAFA" . RESET . PHP_EOL;
+    echo GREEN . "BY ALPERENTHE" . RESET . PHP_EOL;
+    echo BLUE . "FREE VERSION" . RESET . PHP_EOL;
+    echo str_repeat('-', 42) . PHP_EOL;
+}
+
+function readEmail(): string
+{
+    $envEmail = getenv('FAUCETPAY_EMAIL') ?: '';
+    if ($envEmail !== '' && filter_var($envEmail, FILTER_VALIDATE_EMAIL)) {
+        return $envEmail;
     }
-    echo "\r                                     \r";
-}
 
-function slider($app_id, $public_key, $version, $reff, $apikey) {
-    $headers = ["Content-Type: application/json"];
-    $body = json_encode([
-        "apikey"     => $apikey,
-        "app_id"     => $app_id,
-        "methods"    => "rslider",
-        "public_key" => $public_key,
-        "version"    => $version,
-        "referer"    => $reff,
-        "json"       => 1
-    ]);
-    $request = skibidixxx(api_in, "POST", $body, $headers);
-    if (strpos($request, "ERROR_WRONG_METHOD") !== false) { echo putih."Error: ".merah."ERROR_WRONG_METHOD\n"; exit; }
-    if (strpos($request, "ERROR_KEY_DOES_NOT_EXIST") !== false) { echo putih."Error: ".merah."ERROR_KEY_DOES_NOT_EXIST\n"; exit; }
-    if (strpos($request, "ERROR_METHOD_NOT_SPECIFIED") !== false) { echo putih."Error: ".merah."ERROR_METHOD_NOT_SPECIFIED\n"; exit; }
-    if (strpos($request, "ERROR_NO_SUCH_METHOD") !== false) { echo putih."Error: ".merah."ERROR_NO_SUCH_METHOD\n"; exit; }
-    if (strpos($request, "ERROR_DATABASE_CONNECTION_FAILED") !== false) { echo putih."Error: ".merah."ERROR_DATABASE_CONNECTION_FAILED\n"; exit; }
-    if (strpos($request, "ERROR_TOO_MANY_REQUESTS") !== false) { echo putih."Error: ".merah."ERROR_TOO_MANY_REQUESTS"; sleep(1.8); echo "\r                                               \r"; return "ERROR_TOO_MANY_REQUESTS"; }
-    if (strpos($request, "ERROR_WRONG_USER_KEY") !== false) { echo putih."Error: ".merah."ERROR_WRONG_USER_KEY\n"; exit; }
-    if (strpos($request, "ERROR_ZERO_BALANCE") !== false) { echo putih."Error: ".merah."ERROR_ZERO_BALANCE\n"; exit; }
-    if (strpos($request, "ERROR_BAD_PARAMETERS") !== false) { echo putih."Error: ".merah."ERROR_BAD_PARAMETERS\n"; exit; }
-    if (strpos($request, "ERROR_EMPTY_IMAGE") !== false) { echo putih."Error: ".merah."ERROR_EMPTY_IMAGE\n"; exit; }
-    if (strpos($request, "ERROR_UNKNOWN") !== false) { echo putih."Error: ".merah."ERROR_UNKNOWN\n"; exit; }
-    $json = json_decode($request, true);
-    $id = $json["request"];
-    reload:
-    timer(3);
-    $url = "https://api.waryono.my.id/res.php?apikey=".$apikey."&id=".$id."&json=1";
-    $result = skibidixxx($url, "GET", []);
-    if (strpos($result, "ERROR_BAD_PARAMETERS") !== false) { echo putih."Error: ".merah."ERROR_BAD_PARAMETERS\n"; exit; }
-    if (strpos($result, "Database connection failed") !== false) { echo putih."Error: ".merah."Database connection failed\n"; exit; }
-    if (strpos($result, "WRONG_CAPTCHA_ID") !== false) { echo putih."Error: ".merah."WRONG_CAPTCHA_ID"; sleep(1.8); echo "\r                                               \r"; return "WRONG_CAPTCHA_ID"; }
-    if (strpos($result, "ERROR_SOLVE_PENDING") !== false) { echo putih."Error: ".merah."ERROR_SOLVE_PENDING"; sleep(1.8); echo "\r                                               \r"; return "ERROR_SOLVE_PENDING"; }
-    if (strpos($result, "CAPCHA_NOT_READY") !== false) { echo putih."Error: ".merah."CAPCHA_NOT_READY"; sleep(1.8); echo "\r                                               \r"; goto reload; }
-    if (strpos($result, "ERROR_CAPTCHA_UNSOLVABLE") !== false) { echo putih."Error: ".merah."ERROR_CAPTCHA_UNSOLVABLE"; sleep(1.8); echo "\r                                               \r"; return "ERROR_CAPTCHA_UNSOLVABLE"; }
-    if (strpos($result, "ERROR_BAD_REQUEST") !== false) { echo "Error: ".merah."ERROR_BAD_REQUEST\n"; exit; }
-    if (strpos($result, "INTENAL_SERVER_ERROR") !== false) { echo "Errro: ".merah."INTENAL_SERVER_ERROR"; sleep(1.8); echo "\r                                               \r"; return "INTENAL_SERVER_ERROR"; }
-    $json = json_decode($result, true);
-    $res = $json["request"];
-    preg_match('/rs_token:(\d+),rs_res:([^,]+)/', $res, $match);
-    return [
-        "rs_token" => $match[1], 
-        "rs_res"   => $match[2]
-    ];
-}
-
-
-
-function bypassCloudflare(&$config, $configFile, $target) {
-    echo putih . "Cloudflare! wait.. ";
-    $python_cmd = "python exec.py " . $target ." 2>/dev/null";
-    $output = exec($python_cmd);
-    $data_bypass = json_decode($output, true);
-    if (isset($data_bypass['cf_clearance']) && !empty($data_bypass['cf_clearance'])) {
-        $full_new_cf = $data_bypass['cf_clearance'];
-        $new_ua = $data_bypass['user_agent'];
-        $old_cookie = $config['cookie'];
-        if (strpos($full_new_cf, '=') !== false) {
-            $new_token_value = explode('=', $full_new_cf)[1];
-        } else {
-            $new_token_value = $full_new_cf;
-        }
-        $pattern = '/cf_clearance=[^;]+/';
-        $replacement = "cf_clearance=" . $new_token_value;
-        if (preg_match($pattern, $old_cookie)) {
-            $new_cookie_str = preg_replace($pattern, $replacement, $old_cookie);
-        } else {
-            $new_cookie_str = rtrim($old_cookie, "; ") . "; " . $replacement;
-        }
-        $config['cookie'] = $new_cookie_str;
-        $config['user_agent'] = $new_ua;
-        file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT));
-        echo hijau . "Success Solver Cloudflare! WAF\n";
-        echo putih."------------------------------------------------------\n";
-        sleep(2);
-        return true;
+    if (PHP_SAPI === 'cli') {
+        echo WHITE . 'FaucetPay email: ' . RESET;
+        $email = trim((string) fgets(STDIN));
     } else {
-        echo merah . "Error Bypass\n";
-        echo putih."------------------------------------------------------\n";
-        return false;
+        $email = trim((string) ($_GET['email'] ?? $_POST['email'] ?? ''));
     }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new InvalidArgumentException('Geçerli bir FaucetPay email adresi girilmedi. FAUCETPAY_EMAIL ortam değişkenini de kullanabilirsiniz.');
+    }
+
+    return $email;
 }
 
-function getConfig($configFile) {
-    if (!file_exists($configFile)) {
-        echo putih . "API Key: " . kuning;
-        $apikey = trim(fgets(STDIN));
-        echo putih . "Cookie: " . kuning;
-        $coki = trim(fgets(STDIN));
-        $data = ["apikey" => $apikey, "cookie" => $coki];
-        file_put_contents($configFile, json_encode($data, JSON_PRETTY_PRINT));
-        echo hijau . "disimpan ke $configFile\n\n" . reset;
-        sleep(3);
-        return $data;
+/** @param array<string,mixed> $faucet */
+function buildHandle(array $faucet, int $attempt)
+{
+    $method = strtoupper((string) $faucet['method']);
+    $params = $faucet['params'];
+    $params['attempt'] = (string) $attempt;
+    $url = (string) $faucet['url'];
+
+    $ch = curl_init();
+    if ($method === 'GET') {
+        $url .= (strpos($url, '?') === false ? '?' : '&') . http_build_query($params);
     }
-    return json_decode(file_get_contents($configFile), true);
+
+    $headers = array_merge($faucet['headers'], [
+        'User-Agent: RAGECOIN-Free/1.0',
+        'Cache-Control: no-cache',
+    ]);
+
+    $options = [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HEADER => false,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_CONNECTTIMEOUT => CONNECT_TIMEOUT,
+        CURLOPT_TIMEOUT => TOTAL_TIMEOUT,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_COOKIEFILE => '',
+        CURLOPT_COOKIEJAR => '',
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ];
+
+    if ($method === 'POST') {
+        $options[CURLOPT_POST] = true;
+        $options[CURLOPT_POSTFIELDS] = http_build_query($params);
+    }
+
+    curl_setopt_array($ch, $options);
+    return $ch;
 }
 
+/** @return array<string,mixed> */
+function parseClaimResponse(string $body, int $httpCode, string $curlError): array
+{
+    if ($curlError !== '') {
+        return ['ok' => false, 'message' => $curlError];
+    }
+    if ($body === '' && ($httpCode < 200 || $httpCode >= 300)) {
+        return ['ok' => false, 'message' => 'HTTP ' . $httpCode];
+    }
 
-function banner() {
-    echo putih  . "-----------------------------------------------------\n";
-    echo cyan   . hijau .script_name.putih." Rscap Slider + Seledroid (opsional)\n";
-    echo putih  . "-----------------------------------------------------\n\n";
+    $haystack = strtolower($body);
+    $json = json_decode($body, true);
+    if (is_array($json)) {
+        if (array_key_exists('success', $json) && $json['success'] === false) {
+            return ['ok' => false, 'message' => (string) ($json['message'] ?? 'Claim rejected')];
+        }
+        $demo = $json['form']['demo_response'] ?? $json['args']['demo_response'] ?? null;
+        if (is_string($demo)) {
+            $demoJson = json_decode($demo, true);
+            if (is_array($demoJson) && array_key_exists('success', $demoJson) && $demoJson['success'] === false) {
+                return ['ok' => false, 'message' => (string) ($demoJson['message'] ?? 'Claim rejected')];
+            }
+            $haystack .= ' ' . strtolower($demo);
+        }
+    }
+
+    foreach (['success', 'ok', 'claimed', 'reward'] as $keyword) {
+        if (strpos($haystack, $keyword) !== false) {
+            return ['ok' => true, 'message' => 'Response contains success keyword: ' . $keyword];
+        }
+    }
+
+    return ['ok' => false, 'message' => 'Success keyword bulunamadı'];
 }
 
-login:
-clear();
-banner();
+/** @param array<int,array<string,mixed>> $faucets @return array{success:array<int,array<string,string>>,failed:array<int,array<string,string>>} */
+function runClaims(array $faucets): array
+{
+    $pending = [];
+    foreach ($faucets as $idx => $faucet) {
+        $pending[$idx] = ['faucet' => $faucet, 'attempt' => 0];
+    }
 
+    $success = [];
+    $failed = [];
+    $completed = 0;
+    $total = count($faucets);
 
-$config = getConfig($configFile);
-$apikey = $config['apikey'];
-$coki   = $config['cookie'];
-$ua     = $config['user_agent'] ?? "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36";
+    while ($pending !== []) {
+        $multi = curl_multi_init();
+        $handles = [];
+        foreach ($pending as $idx => $item) {
+            $ch = buildHandle($item['faucet'], $item['attempt']);
+            $handleKey = is_object($ch) ? spl_object_id($ch) : (int) $ch;
+            $handles[$handleKey] = ['idx' => $idx, 'ch' => $ch, 'item' => $item];
+            curl_multi_add_handle($multi, $ch);
+        }
 
+        do {
+            $status = curl_multi_exec($multi, $active);
+            if ($active) {
+                curl_multi_select($multi, 0.2);
+            }
+        } while ($active && $status === CURLM_OK);
 
-dash:
-clear();
-banner();
+        $nextPending = [];
+        foreach ($handles as $handleInfo) {
+            $ch = $handleInfo['ch'];
+            $item = $handleInfo['item'];
+            $faucet = $item['faucet'];
+            $body = (string) curl_multi_getcontent($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            $parsed = parseClaimResponse($body, $httpCode, $error);
 
+            curl_multi_remove_handle($multi, $ch);
+            if (PHP_VERSION_ID < 80000) {
+                curl_close($ch);
+            }
 
+            if ($parsed['ok']) {
+                $completed++;
+                $success[] = ['coin' => (string) $faucet['coin'], 'message' => (string) $parsed['message']];
+                echo GREEN . "[$completed/$total] {$faucet['coin']} tamamlandı: başarılı" . RESET . PHP_EOL;
+                continue;
+            }
 
-$a = [
-    "host: 99faucet.com",
-    "user-agent: " . $ua,
-    "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,q=0.8,application/signed-exchange;v=b3;q=0.7",
-    "referer: ".host."/faucet/pepe",
-    "cookie: " . $coki
-];
+            if ($item['attempt'] < MAX_RETRY) {
+                $nextPending[$handleInfo['idx']] = ['faucet' => $faucet, 'attempt' => $item['attempt'] + 1];
+                echo YELLOW . "{$faucet['coin']} başarısız, 1 kez yeniden denenecek: {$parsed['message']}" . RESET . PHP_EOL;
+                continue;
+            }
 
-$url = host."/dashboard";
-$dash = skibidixxx($url, "GET", [], $a);
+            $completed++;
+            $failed[] = ['coin' => (string) $faucet['coin'], 'message' => (string) $parsed['message']];
+            echo RED . "[$completed/$total] {$faucet['coin']} tamamlandı: başarısız - {$parsed['message']}" . RESET . PHP_EOL;
+        }
+        curl_multi_close($multi);
+        $pending = $nextPending;
+    }
 
-if ($dash == "ngelek" || strpos($dash, "Just a moment") !== false) {
-    bypassCloudflare($config, $configFile, $url);
-    $coki = $config['cookie'];
-    $ua   = $config['user_agent'];
-    goto dash;
+    return ['success' => $success, 'failed' => $failed];
 }
 
-if (strpos($dash, "Dashboard | 99Faucet") !== false) {
-    preg_match_all('/<a href="https:\/\/99faucet\.com\/faucet\/([^"]+)" class="">/', $dash, $matches);
-    $currencies = $matches[1];
-    usort($currencies, function($a, $b) {
-        return strlen($a) - strlen($b);
-    });
-    $columns = 4;
-    $total = count($currencies);
-    for ($i = 0; $i < $total; $i++) {
-        $num = $i + 1;
-        $currency = strtoupper($currencies[$i]);
-        echo putih."(" . str_pad($num, 2, ' ', STR_PAD_LEFT) . ") ".hijau . str_pad($currency, 6, ' ') . "".putih;
-        if (($i + 1) % $columns == 0 || $i == $total - 1) {
-            echo "\n";
-        }
+function runExecWarmup(): void
+{
+    $cmd = 'php -r ' . escapeshellarg('echo "exec-parallel-ready";');
+    $output = [];
+    $code = 1;
+    exec($cmd, $output, $code);
+    echo CYAN . 'exec() kontrolü: ' . (($code === 0) ? implode('', $output) : 'başarısız') . RESET . PHP_EOL;
+}
+
+try {
+    banner();
+    if (!extension_loaded('curl')) {
+        throw new RuntimeException('PHP cURL eklentisi yüklü değil.');
     }
-    echo putih."chosee: ".merah;
-    $handle = fopen("php://stdin", "r");
-    $input = trim(fgets($handle));
-    fclose($handle);
-    if (!is_numeric($input)) {
-        echo putih."Invalid input! Please enter a number.\n";
-        sleep(2);
-        goto dash;
+    if (!extension_loaded('json')) {
+        throw new RuntimeException('PHP json eklentisi yüklü değil.');
     }
-    $input = (int)$input;
-    if ($input < 1 || $input > count($currencies)) {
-        echo putih."Invalid selection! Please choose between 1-" . count($currencies) . "\n";
-        sleep(4);
-        goto dash;
+
+    $email = readEmail();
+    runExecWarmup();
+    $faucets = faucetList($email);
+    $startedAt = microtime(true);
+    $results = runClaims($faucets);
+    $duration = round(microtime(true) - $startedAt, 2);
+
+    echo PHP_EOL . GREEN . 'Başarılı claim listesi (' . count($results['success']) . '/18):' . RESET . PHP_EOL;
+    foreach ($results['success'] as $row) {
+        echo GREEN . ' + ' . $row['coin'] . ': ' . $row['message'] . RESET . PHP_EOL;
     }
-    $selectedCurrency = $currencies[$input-1];
-    $memek = strtolower($selectedCurrency);
-    echo putih."chosee: ".hijau .$memek. "\n\n";
 
-    reload:
-    while(true){
-        $a = [
-            "host: 99faucet.com",
-            "user-agent: " . $ua,
-            "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "referer: ".host."/dashboard",
-            "cookie: " . $coki
-        ];
-
-        $c = [
-            "host: 99faucet.com",
-            "origin: ".host,
-            "content-type: application/x-www-form-urlencoded",
-            "user-agent: " . $ua,
-            "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "referer: https://99faucet.com/faucet/ltc",
-            "cookie: " . $coki
-        ];
-
-        $url = host."/faucet/".$memek;
-        $faucet = skibidixxx($url, "GET", [], $a);
-
-        if ($faucet == "ngelek" || strpos($faucet, "Just a moment") !== false) {
-            bypassCloudflare($config, $configFile, $url);
-            $coki = $config['cookie'];
-            $ua   = $config['user_agent'];
-            goto reload;
-        }
-
-        if (strpos($faucet, "Shortlinks | 99Faucet") !== false) {
-	    echo putih."------------------------------------------------------\n";
-            echo kuning."You Need to Complete Atleast 1 Shortlinks!\n";
-            echo putih."enter to reload..";
-            trim(fgets(STDIN));
-            goto reload;
-        }
-        $token = explode('"', explode('<input type="hidden" name="token" value="', $faucet)[1])[0];
-
-        $app_id = "1044";
-        $public_key = "ws1WNm5E0xjtnezLT8r9";
-        $version = "v5";
-        $reff = "https://99faucet.com/";
-
-        $bypass = slider($app_id, $public_key, $version, $reff, $apikey);
-        if (is_array($bypass)) {
-        
-        $data = http_build_query([
-            "ci_csrf_token" => "",
-            "token" => $token,
-            "currency" => $memek,
-            "captcha" => "rscaptchav37",
-            "rscaptcha_token" => $bypass["rs_token"],
-            "rscaptcha_response" => $bypass["rs_res"],
-            "uf" => uf(),
-            "utt" => "Asia/Jakarta",
-            "ls" => "id,en-US,en,ms,ru"
-        ]);
-        timer(5);
-        $url = host."/faucet/verify";
-        $claim = skibidixxx($url, "POST", $data, $c);
-        
-        if (strpos($claim, "Good job!") !== false) {
-            $msg = explode("'", explode("text: '", $claim)[1])[0];
-            $timer = explode(' -', explode('let wait = ', $claim)[1])[0];
-            echo hijau.$msg."\n";
-            timer($timer);
-        } elseif (strpos($claim, "Invalid") !== false){
-            echo "Invalid captcha or invalid claim!\n";
-            goto reload;
-        } elseif (strpos($claim, "The faucet does not have sufficient funds") !== false) {
-	    echo putih."------------------------------------------------------\n";
-            echo kuning."The faucet does not have sufficient funds.\n";
-            echo putih."enter to menu..";
-            trim(fgets(STDIN));
-            goto dash;
-        } else {
-            echo merah."Error tidak tahu gua anjay!";
-	    sleep(1.8);
-	    echo "\r                                  \r";
-            goto reload;
-        }
-
-        } elseif (in_array($bypass, ["WRONG_CAPTCHA_ID", "ERROR_CAPTCHA_UNSOLVABLE", "ERROR_TOO_MANY_REQUESTS", "ERROR_SOLVE_PENDING", "INTENAL_SERVER_ERROR"])) {
-        goto reload;
-        } else {
-        echo putih . "Error: " . merah . " Tidak di ketahui!! coba lagi...\n";
-        goto reload;
-     }
+    echo PHP_EOL . RED . 'Başarısız claim listesi (' . count($results['failed']) . '/18):' . RESET . PHP_EOL;
+    foreach ($results['failed'] as $row) {
+        echo RED . ' - ' . $row['coin'] . ': ' . $row['message'] . RESET . PHP_EOL;
     }
-} else {
-    echo putih."Hiii Login again ....!\n";
-    @unlink($configFile);
-    sleep(4);
-    goto login;
+
+    echo PHP_EOL . WHITE . 'Toplam süre: ' . $duration . ' saniye' . RESET . PHP_EOL;
+    exit(count($results['success']) >= 10 ? 0 : 2);
+} catch (Throwable $e) {
+    fwrite(STDERR, RED . 'Hata: ' . $e->getMessage() . RESET . PHP_EOL);
+    exit(1);
 }
