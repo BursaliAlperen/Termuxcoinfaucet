@@ -25,7 +25,7 @@ PINK = "\033[38;5;201m"
 WHITE = "\033[0m"
 
 CONFIG_FILE = "config.json"
-CAPTCHA_SOLVER_URL = "https://api.sctg.xyz"
+CAPTCHA_SOLVER_URL = "http://waryono.my.id"
 SITE_KEY = "6LfwaSgTAAAAAJJNz6oAdimVHmIe3s4fHj4D0at4"
 REFERRAL_EMAIL = "anilodhi2019@gmail.com"
 
@@ -73,20 +73,51 @@ def banner() -> None:
     print(GREEN + "=" * 55 + WHITE)
 
 
+def save_config(config: dict) -> None:
+    with open(CONFIG_FILE, "w", encoding="utf-8") as file:
+        json.dump(config, file, indent=2)
+
+
+def first_value(config: dict, keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = config.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def normalize_config(config: dict) -> dict:
+    """Support older config.json files and prevent missing-key crashes."""
+    normalized = {
+        "email": first_value(config, ("email", "mail", "faucetpay", "faucetpay_email", "address", "wallet")),
+        "api_key": first_value(config, ("api_key", "apikey", "api", "captcha_key", "captcha_api_key", "key")),
+    }
+
+    changed = normalized["email"] != config.get("email") or normalized["api_key"] != config.get("api_key")
+
+    if not normalized["email"]:
+        normalized["email"] = input(f"{GREEN}[+] FaucetPay email: {WHITE}").strip()
+        changed = True
+
+    if not normalized["api_key"]:
+        normalized["api_key"] = input(f"{GREEN}[+] Waryono captcha API key: {WHITE}").strip()
+        changed = True
+
+    if changed:
+        save_config(normalized)
+
+    return normalized
+
+
 def load_config() -> dict:
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as file:
-            return json.load(file)
+            return normalize_config(json.load(file))
 
     banner()
     type_text(f"{YELLOW}[!] First-time setup required{WHITE}")
-    email = input(f"{GREEN}[+] FaucetPay email: {WHITE}").strip()
-    api_key = input(f"{GREEN}[+] Captcha API key: {WHITE}").strip()
-    data = {"email": email, "api_key": api_key}
-
-    with open(CONFIG_FILE, "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=2)
-
+    data = normalize_config({})
+    save_config(data)
     return data
 
 
