@@ -6,7 +6,7 @@ date_default_timezone_set('Europe/Istanbul');
 $c = [
     'reset' => "\033[0m", 'putih' => "\033[1;37m", 'merah' => "\033[1;31m",
     'hijau' => "\033[1;32m", 'kuning' => "\033[1;33m", 'biru' => "\033[1;34m",
-    'cyan' => "\033[1;36m", 'abu' => "\033[0;90m"
+    'cyan' => "\033[1;36m", 'mor' => "\033[1;35m", 'abu' => "\033[0;90m"
 ];
 
 $ayarDosyasi = __DIR__ . "/config.json";
@@ -51,16 +51,13 @@ $aktif_adresler = [
 
 function ekraniTemizle() { (PHP_OS == "Linux") ? system('clear') : pclose(popen('cls', 'w')); }
 
-function baslikYaz($aktifSayisi = 0, $basarili = 0, $basarisiz = 0, $toplam = 0) {
-    global $c;
-    echo $c['cyan']."╔════════════════════════════════════════════════════════╗\n";
-    echo $c['cyan']."║ ".$c['putih']."        ✦ NINOKICOIN V1 PROFESYONEL FAUCET ✦        ".$c['cyan']."║\n";
-    echo $c['cyan']."╠════════════════════════════════════════════════════════╣\n";
-    echo $c['cyan']."║ ".$c['putih']."Aktif: ".$c['hijau'].str_pad((string)$aktifSayisi, 3).$c['putih']."  Basarili: ".$c['hijau'].str_pad((string)$basarili, 3).$c['putih']."  Basarisiz: ".$c['merah'].str_pad((string)$basarisiz, 3).$c['putih']."  Toplam: ".$c['kuning'].str_pad((string)$toplam, 3).$c['cyan']."║\n";
-    echo $c['cyan']."╚════════════════════════════════════════════════════════╝\n".$c['reset'];
+function progressBar($deger, $toplam, $genislik = 20) {
+    $oran = $toplam > 0 ? max(0, min(1, $deger / $toplam)) : 0;
+    $dolu = (int)round($oran * $genislik);
+    return str_repeat('█', $dolu).str_repeat('░', $genislik - $dolu).' '.str_pad((string)round($oran * 100), 3, ' ', STR_PAD_LEFT).'%';
 }
 
-function yuklemeGoster($mesaj = 'NınokıCoın yukleniyor') {
+function devBannerYaz() {
     global $c;
     $logo = [
         '███╗   ██╗██╗███╗   ██╗ ██████╗ ██╗  ██╗██╗',
@@ -70,12 +67,38 @@ function yuklemeGoster($mesaj = 'NınokıCoın yukleniyor') {
         '██║ ╚████║██║██║ ╚████║╚██████╔╝██║  ██╗██║',
         '╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝',
     ];
+    echo $c['mor']."╔════════════════════════════════════════════════════════╗\n";
+    echo $c['mor']."║".$c['putih']."                    DEV NINOKI                  ".$c['mor']."║\n";
+    echo $c['mor']."╠════════════════════════════════════════════════════════╣\n";
     foreach ($logo as $satir) echo $c['cyan'].$satir."\n".$c['reset'];
-    for ($i = 0; $i <= 20; $i++) {
-        echo $c['kuning']."\r$mesaj [".str_repeat('█', $i).str_repeat('░', 20 - $i)."] ".($i * 5)."%".$c['reset'];
-        usleep(35000);
+    echo $c['mor']."╚════════════════════════════════════════════════════════╝\n".$c['reset'];
+}
+
+function baslikYaz($aktifSayisi = 0, $basarili = 0, $basarisiz = 0, $toplam = 0, $limitCikarilan = 0) {
+    global $c;
+    $islenen = max(0, $basarili + $basarisiz);
+    $basariBar = progressBar($basarili, max(1, $islenen));
+    $hataBar = progressBar($basarisiz, max(1, $islenen));
+    echo $c['cyan']."╔════════════════════════════════════════════════════════╗\n";
+    echo $c['cyan']."║ ".$c['putih']."        ✦ NINOKICOIN V1 PROFESYONEL FAUCET ✦        ".$c['cyan']."║\n";
+    echo $c['cyan']."╠════════════════════════════════════════════════════════╣\n";
+    echo $c['cyan']."║ ".$c['putih']."Aktif: ".$c['hijau'].str_pad((string)$aktifSayisi, 3).$c['putih']."  Basarili: ".$c['hijau'].str_pad((string)$basarili, 3).$c['putih']."  Hata: ".$c['merah'].str_pad((string)$basarisiz, 3).$c['putih']."  Deneme: ".$c['kuning'].str_pad((string)$toplam, 3).$c['cyan']."║\n";
+    echo $c['cyan']."║ ".$c['putih']."Limitten cikarilan: ".$c['kuning'].str_pad((string)$limitCikarilan, 3).$c['putih']."  Limit hata oranina eklenmez: ".$c['hijau']."0% ".$c['cyan']."║\n";
+    echo $c['cyan']."║ ".$c['hijau']."Basari ".$basariBar.$c['cyan']." ║\n";
+    echo $c['cyan']."║ ".$c['merah']."Hata   ".$hataBar.$c['cyan']." ║\n";
+    echo $c['cyan']."╚════════════════════════════════════════════════════════╝\n".$c['reset'];
+}
+
+function yuklemeGoster($mesaj = 'NınokıCoın yukleniyor') {
+    global $c;
+    devBannerYaz();
+    $spinner = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+    for ($i = 0; $i <= 30; $i++) {
+        $ikon = $spinner[$i % count($spinner)];
+        echo $c['kuning']."\r  $ikon $mesaj [".str_repeat('█', $i).str_repeat('░', 30 - $i)."] ".str_pad((string)round($i * 100 / 30), 3, ' ', STR_PAD_LEFT)."%".$c['reset'];
+        usleep(30000);
     }
-    echo "\n";
+    echo "\n".$c['hijau']."  ✓ Arayuz hazir, giris bilgileri bekleniyor...\n\n".$c['reset'];
 }
 
 
@@ -131,7 +154,7 @@ function httpIstek($url, $method = 'GET', $data = [], $headers = [], $cookie_fil
 $kayitliAyarlar = file_exists($ayarDosyasi) ? json_decode(file_get_contents($ayarDosyasi), true) : [];
 ekraniTemizle();
 yuklemeGoster();
-baslikYaz(count($aktif_adresler));
+baslikYaz(count($aktif_adresler), 0, 0, 0, 0);
 echo $c['putih']."Her calistirmada bilgilerinizi yeniden soruyoruz. Bos birakirsaniz kayitli deger kullanilir.\n".$c['reset'];
 echo $c['putih']."FaucetPay e-postasi".(empty($kayitliAyarlar['email']) ? '' : ' ['.$kayitliAyarlar['email'].']').": ".$c['reset'];
 $emailGiris = trim(fgets(STDIN));
@@ -194,6 +217,7 @@ function hCaptchaCoz($api_key, $pageurl, $sitekey) {
 // ==========================================
 $basariliKlaim = 0;
 $basarisizKlaim = 0;
+$limitCikarilan = 0;
 $toplamDeneme = 0;
 
 while (true) {
@@ -205,7 +229,7 @@ while (true) {
 
     foreach ($aktif_adresler as $coin => $target_url) {
         ekraniTemizle();
-        baslikYaz(count($aktif_adresler), $basariliKlaim, $basarisizKlaim, $toplamDeneme);
+        baslikYaz(count($aktif_adresler), $basariliKlaim, $basarisizKlaim, $toplamDeneme, $limitCikarilan);
         echo $c['putih']." Hedef  : ".$c['hijau'].$coin.$c['reset']."\n";
         echo $c['putih']." Referans: ".$c['cyan']."ankaralironaldo131@gmail.com".$c['reset']."\n";
         echo $c['cyan']."────────────────────────────────────────────────────────\n".$c['reset'];
@@ -237,7 +261,8 @@ while (true) {
             strpos($html_lower, "sufficient funds") !== false) {
             
             echo $c['merah']."\n  [!] DUR: Ilk sayfada Anti-Fraud/Limit uyarisi algilandi: $coin!\n".$c['reset'];
-            echo $c['kuning']."  [*] Listeden cikariliyor: $coin listeden...\n".$c['reset'];
+            echo $c['kuning']."  [*] Listeden cikariliyor: $coin listeden... (hata oranina eklenmedi)\n".$c['reset'];
+            $limitCikarilan++;
             unset($aktif_adresler[$coin]); 
             sleep(1); 
             continue;
@@ -298,7 +323,9 @@ while (true) {
                         strpos($pesan_lower, 'anti-fraud') !== false ||
                         strpos($pesan_lower, 'antifraud') !== false) {
 
-                        echo $c['kuning']."  [!] Listeden cikariliyor: $coin calisma listesinden...\n".$c['reset'];
+                        echo $c['kuning']."  [!] Listeden cikariliyor: $coin calisma listesinden... (hata oranina eklenmedi)\n".$c['reset'];
+                        $limitCikarilan++;
+                        $basarisizKlaim = max(0, $basarisizKlaim - 1);
                         unset($aktif_adresler[$coin]);
                     }
                 } else {
@@ -360,7 +387,8 @@ while (true) {
                     strpos($respon_lower, "anti-fraud") !== false ||
                     strpos($respon_lower, "antifraud") !== false) {
 
-                    echo $c['merah']."\n  [!] STOP: Limit/Bakiye/Anti-Fraud algilandi: $coin!\n".$c['reset'];
+                    echo $c['merah']."\n  [!] STOP: Limit/Bakiye/Anti-Fraud algilandi: $coin! (hata oranina eklenmedi)\n".$c['reset'];
+                    $limitCikarilan++;
                     unset($aktif_adresler[$coin]); 
                     sleep(1); continue;
                 }
