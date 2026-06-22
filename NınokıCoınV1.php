@@ -18,6 +18,7 @@ $kisaMolaSaniye = $hizliMod ? 0 : 1;
 $httpTekrarDeneme = 2;
 $httpZamanAsimi = $hizliMod ? 18 : 30;
 $captchaKontrolSaniye = $hizliMod ? 3 : 5;
+$captchaMaksBeklemeSaniye = $hizliMod ? 45 : 120;
 
 // HEDEF ADRES LISTESI (NınokıCoın için tek listede)
 $aktif_adresler = [
@@ -144,6 +145,45 @@ function gizliAlanlariEkle($html, &$payload) {
     }
 }
 
+function temizMetin($metin) {
+    return trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $metin))));
+}
+
+function alertMesajlariBul($html) {
+    $mesajlar = [];
+    if (preg_match_all('/<div class="alert alert-(?:danger|warning)[^>]*>(.*?)<\/div>/is', $html, $eslesenler)) {
+        foreach ($eslesenler[1] as $mesaj) {
+            $temiz = temizMetin($mesaj);
+            if ($temiz !== '') $mesajlar[] = $temiz;
+        }
+    }
+    return $mesajlar;
+}
+
+function limitUyarisiVar($html) {
+    $aranacakMetinler = alertMesajlariBul($html);
+    if (empty($aranacakMetinler)) {
+        if (preg_match('/<main\b[^>]*>(.*?)<\/main>/is', $html, $main)) $aranacakMetinler[] = temizMetin($main[1]);
+        elseif (preg_match('/<body\b[^>]*>(.*?)<\/body>/is', $html, $body)) $aranacakMetinler[] = temizMetin($body[1]);
+    }
+
+    foreach ($aranacakMetinler as $metin) {
+        $kucuk = strtolower($metin);
+        if (strpos($kucuk, 'daily claim limit') !== false ||
+            strpos($kucuk, 'reached your daily') !== false ||
+            strpos($kucuk, 'come back tomorrow') !== false ||
+            strpos($kucuk, 'anti fraud') !== false ||
+            strpos($kucuk, 'anti-fraud') !== false ||
+            strpos($kucuk, 'antifraud') !== false ||
+            strpos($kucuk, 'insufficient funds') !== false ||
+            strpos($kucuk, 'does not have sufficient funds') !== false ||
+            strpos($kucuk, 'no funds') !== false) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function httpIstek($url, $method = 'GET', $data = [], $headers = [], $cookie_file = '') {
     global $httpTekrarDeneme, $httpZamanAsimi;
     $sonHata = '';
@@ -198,7 +238,7 @@ kisaMola();
 // 2. HCAPTCHA COZME FONKSIYONU
 // ==========================================
 function hCaptchaCoz($api_key, $pageurl, $sitekey) {
-    global $c, $captchaKontrolSaniye;
+    global $c, $captchaKontrolSaniye, $captchaMaksBeklemeSaniye;
     echo $c['kuning'] . "  [~] hCaptcha gorevi bypass API servisine gonderiliyor...\n" . $c['reset'];
 
     $safe_pageurl = urlencode($pageurl);
@@ -214,9 +254,14 @@ function hCaptchaCoz($api_key, $pageurl, $sitekey) {
     }
 
     $task_id = explode('|', $submit['body'])[1];
-    echo $c['biru'] . "  [~] Task ID: $task_id. Sonuc bekleniyor...\n" . $c['reset'];
+    echo $c['biru'] . "  [~] Task ID: $task_id. En fazla {$captchaMaksBeklemeSaniye} sn beklenecek...\n" . $c['reset'];
+    $baslamaZamani = time();
 
     while (true) {
+        if ((time() - $baslamaZamani) >= $captchaMaksBeklemeSaniye) {
+            echo $c['kuning'] . "\n  [!] API cok uzun surdu, bu koin hizli modda atlandi.\n" . $c['reset'];
+            return false;
+        }
         sleep($captchaKontrolSaniye);
         $res_url = "https://bypassallshortlinks.space/res.php?key=$api_key&id=$task_id";
         $result = httpIstek($res_url, 'GET', [], $api_headers);
@@ -277,14 +322,9 @@ while (true) {
         $html = $req1['body'];
 
         // --- ERKEN KONTROL (ANTI-FRAUD & GENEL LIMIT) ---
-        $html_lower = strtolower($html);
-        if (strpos($html_lower, "anti fraud") !== false ||
-            strpos($html_lower, "antifraud") !== false ||
-            strpos($html_lower, "anti-fraud") !== false ||
-            strpos($html_lower, "daily claim limit") !== false ||
-            strpos($html_lower, "sufficient funds") !== false) {
+        if (limitUyarisiVar($html)) {
 
-            echo $c['merah']."\n  [!] DUR: Ilk sayfada Anti-Fraud/Limit uyarisi algilandi: $coin!\n".$c['reset'];
+            echo $c['merah']."\n  [!] DUR: Net Anti-Fraud/Limit uyarisi algilandi: $coin!\n".$c['reset'];
             echo $c['kuning']."  [*] Listeden cikariliyor: $coin listeden... (hata oranina eklenmedi)\n".$c['reset'];
             $limitCikarilan++;
             unset($aktif_adresler[$coin]);
@@ -332,11 +372,11 @@ while (true) {
                 $responHTML = $req2['body'];
 
                 if (preg_match('/<div class="alert alert-success[^>]*>(.*?)<\/div>/is', $responHTML, $msg)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $msg[1]))));
+                    $pesan = temizMetin($msg[1]);
                     echo $c['hijau']."  [+] BASARILI ($coin): $pesan\n".$c['reset'];
                     $basariliKlaim++;
                 } elseif (preg_match('/<div class="alert alert-danger[^>]*>(.*?)<\/div>/is', $responHTML, $msg)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $msg[1]))));
+                    $pesan = temizMetin($msg[1]);
                     echo $c['merah']."  [-] BASARISIZ ($coin): $pesan\n".$c['reset'];
                     $basarisizKlaim++;
 
@@ -374,7 +414,7 @@ while (true) {
             if (empty($session_token)) {
                 echo $c['merah']."  [-] Oturum tokeni alinamadi.\n".$c['reset'];
                 if (preg_match('/<div class="alert alert-danger[^>]*>(.*?)<\/div>/is', $html, $m_alert)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $m_alert[1]))));
+                    $pesan = temizMetin($m_alert[1]);
                     echo $c['kuning']."  [*] Web bilgisi: $pesan\n".$c['reset'];
                     if (strpos(strtolower($pesan), 'wait') !== false) echo $c['kuning']."  [*] Bu faucet cooldown durumunda, simdilik geciliyor...\n".$c['reset'];
                 } elseif (strpos($html, 'Just a moment') !== false || strpos($html, 'cf-browser-verification') !== false) {
@@ -405,24 +445,20 @@ while (true) {
                 $responHTML = $req2['body'];
 
                 // BURADA EK ANTI-FRAUD KONTROLU
-                $respon_lower = strtolower($responHTML);
-                if (strpos($respon_lower, "daily claim limit") !== false ||
-                    strpos($respon_lower, "sufficient funds") !== false ||
-                    strpos($respon_lower, "anti-fraud") !== false ||
-                    strpos($respon_lower, "antifraud") !== false) {
+                if (limitUyarisiVar($responHTML)) {
 
-                    echo $c['merah']."\n  [!] STOP: Limit/Bakiye/Anti-Fraud algilandi: $coin! (hata oranina eklenmedi)\n".$c['reset'];
+                    echo $c['merah']."\n  [!] STOP: Net Limit/Bakiye/Anti-Fraud algilandi: $coin! (hata oranina eklenmedi)\n".$c['reset'];
                     $limitCikarilan++;
                     unset($aktif_adresler[$coin]);
                     kisaMola(); continue;
                 }
 
                 if (preg_match('/<div class="alert alert-success[^>]*>(.*?)<\/div>/is', $responHTML, $msg)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $msg[1]))));
+                    $pesan = temizMetin($msg[1]);
                     echo $c['hijau']."  [+] BASARILI ($coin): $pesan\n".$c['reset'];
                     $basariliKlaim++;
                 } elseif (preg_match('/<div class="alert alert-danger[^>]*>(.*?)<\/div>/is', $responHTML, $msg)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $msg[1]))));
+                    $pesan = temizMetin($msg[1]);
                     echo $c['merah']."  [-] BASARISIZ ($coin): $pesan\n".$c['reset'];
                     $basarisizKlaim++;
                 } else {
