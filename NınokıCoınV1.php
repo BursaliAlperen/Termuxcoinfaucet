@@ -10,6 +10,9 @@ $c = [
 ];
 
 $cookieFile = __DIR__ . "/cookies.txt"; // Oturum çerezleri için sabit dosya yolu
+$logFile = __DIR__ . "/ninokicoin.log";
+$pidFile = __DIR__ . "/ninokicoin.pid";
+$api_bitti = false;
 
 // HEDEF URL LİSTESİ (Tüm desteklenen faucetler)
 $active_urls = [
@@ -49,6 +52,84 @@ $active_urls = [
 ];
 
 function clear() { (PHP_OS == "Linux") ? system('clear') : pclose(popen('cls', 'w')); }
+
+
+function argDegeri($ad) {
+    global $argv;
+    foreach ($argv as $arg) {
+        if (strpos($arg, $ad . '=') === 0) {
+            return substr($arg, strlen($ad) + 1);
+        }
+    }
+    return null;
+}
+
+function calisanPid($pidFile) {
+    if (!file_exists($pidFile)) return false;
+    $pid = (int)trim(file_get_contents($pidFile));
+    if ($pid <= 0) return false;
+    if (function_exists('posix_kill') && @posix_kill($pid, 0)) return $pid;
+    if (PHP_OS_FAMILY !== 'Windows') {
+        exec('kill -0 ' . (int)$pid . ' 2>/dev/null', $out, $code);
+        if ($code === 0) return $pid;
+    }
+    @unlink($pidFile);
+    return false;
+}
+
+function arkaPlanBaslat($email, $api_key) {
+    global $c, $logFile, $pidFile;
+    if ($pid = calisanPid($pidFile)) {
+        echo $c['kuning']."[!] NınokıCoın zaten arka planda çalışıyor. PID: $pid\n".$c['reset'];
+        echo $c['putih']."[*] Log dosyası: $logFile\n".$c['reset'];
+        exit;
+    }
+
+    $php = escapeshellarg(PHP_BINARY);
+    $script = escapeshellarg(__FILE__);
+    $emailArg = escapeshellarg('--email=' . base64_encode($email));
+    $apiArg = escapeshellarg('--api-key=' . base64_encode($api_key));
+    $log = escapeshellarg($logFile);
+    $cmd = "nohup $php $script --run-daemon $emailArg $apiArg >> $log 2>&1 & echo $!";
+    $pid = trim(shell_exec($cmd));
+
+    if ($pid !== '') {
+        file_put_contents($pidFile, $pid);
+        echo $c['hijau']."[+] NınokıCoın 7/24 arka plan modu başlatıldı. PID: $pid\n".$c['reset'];
+        echo $c['putih']."[*] BypassAllShortlinks bakiyesi/API erişimi bitene kadar çalışır.\n".$c['reset'];
+        echo $c['putih']."[*] Log dosyası: $logFile\n".$c['reset'];
+        echo $c['putih']."[*] Durdurmak için: php " . basename(__FILE__) . " --stop\n".$c['reset'];
+    } else {
+        echo $c['merah']."[!] Arka plan modu başlatılamadı.\n".$c['reset'];
+    }
+    exit;
+}
+
+function arkaPlanDurdur() {
+    global $c, $pidFile;
+    $pid = calisanPid($pidFile);
+    if (!$pid) {
+        echo $c['kuning']."[!] Çalışan arka plan süreci bulunamadı.\n".$c['reset'];
+        exit;
+    }
+    if (function_exists('posix_kill')) @posix_kill($pid, SIGTERM);
+    else exec('kill ' . (int)$pid . ' 2>/dev/null');
+    @unlink($pidFile);
+    echo $c['hijau']."[+] Arka plan süreci durduruldu. PID: $pid\n".$c['reset'];
+    exit;
+}
+
+function arkaPlanDurumu() {
+    global $c, $pidFile, $logFile;
+    $pid = calisanPid($pidFile);
+    if ($pid) {
+        echo $c['hijau']."[+] NınokıCoın arka planda çalışıyor. PID: $pid\n".$c['reset'];
+        echo $c['putih']."[*] Log dosyası: $logFile\n".$c['reset'];
+    } else {
+        echo $c['kuning']."[!] NınokıCoın arka planda çalışmıyor.\n".$c['reset'];
+    }
+    exit;
+}
 
 function skibidixxx($url, $method = 'GET', $data = [], $headers = [], $cookie_file = '') {
     $ch = curl_init();
@@ -90,14 +171,31 @@ function yukleniyor($mesaj = "NınokıCoın hazırlanıyor") {
     echo "\n";
 }
 
-yukleniyor();
-echo $c['putih']."FaucetPay e-posta adresinizi girin: ".$c['reset'];
-$email = trim(fgets(STDIN));
-echo $c['putih']."BypassAllShortlinks API anahtarınızı girin: ".$c['reset'];
-$api_key = trim(fgets(STDIN));
-if ($email === '' || $api_key === '') {
-    echo $c['merah']."[!] E-posta ve API anahtarı boş bırakılamaz.\n".$c['reset'];
-    exit;
+if (in_array('--stop', $argv, true)) arkaPlanDurdur();
+if (in_array('--status', $argv, true)) arkaPlanDurumu();
+
+$daemonMode = in_array('--run-daemon', $argv, true);
+$backgroundMode = in_array('--background', $argv, true) || in_array('--arka-plan', $argv, true);
+
+if ($daemonMode) {
+    $email = base64_decode(argDegeri('--email') ?? '', true) ?: '';
+    $api_key = base64_decode(argDegeri('--api-key') ?? '', true) ?: '';
+    if ($email === '' || $api_key === '') exit;
+    file_put_contents($pidFile, getmypid());
+    register_shutdown_function(function() use ($pidFile) {
+        if (file_exists($pidFile) && trim(file_get_contents($pidFile)) == getmypid()) @unlink($pidFile);
+    });
+} else {
+    yukleniyor();
+    echo $c['putih']."FaucetPay e-posta adresinizi girin: ".$c['reset'];
+    $email = trim(fgets(STDIN));
+    echo $c['putih']."BypassAllShortlinks API anahtarınızı girin: ".$c['reset'];
+    $api_key = trim(fgets(STDIN));
+    if ($email === '' || $api_key === '') {
+        echo $c['merah']."[!] E-posta ve API anahtarı boş bırakılamaz.\n".$c['reset'];
+        exit;
+    }
+    if ($backgroundMode) arkaPlanBaslat($email, $api_key);
 }
 
 $istatistik = [
@@ -111,7 +209,7 @@ $istatistik = [
 // 2. HCAPTCHA BYPASS API İŞLEVİ
 // ==========================================
 function hCaptchaCoz($api_key, $pageurl, $sitekey) {
-    global $c;
+    global $c, $api_bitti;
     echo $c['kuning'] . "  [~] hCaptcha görevi bypass API'sine gönderiliyor...\n" . $c['reset'];
     
     $safe_pageurl = urlencode($pageurl);
@@ -123,6 +221,12 @@ function hCaptchaCoz($api_key, $pageurl, $sitekey) {
     
     if (strpos($submit['body'], 'OK|') === false) {
         echo $c['merah'] . "  [!] API gönderimi başarısız: " . $submit['body'] . "\n" . $c['reset'];
+        if (strpos($submit['body'], 'ERROR_ZERO_BALANCE') !== false ||
+            strpos($submit['body'], 'ERROR_KEY_DOES_NOT_EXIST') !== false ||
+            strpos($submit['body'], 'ERROR_WRONG_USER_KEY') !== false) {
+            $api_bitti = true;
+            echo $c['merah'] . "  [!] BypassAllShortlinks API bakiyesi/erişimi bitti. 7/24 çalışma durduruluyor.\n" . $c['reset'];
+        }
         return false;
     }
     
@@ -144,6 +248,13 @@ function hCaptchaCoz($api_key, $pageurl, $sitekey) {
         }
         if (strpos($result['body'], 'ERROR') !== false) {
             echo $c['merah'] . "\n  [!] API hatası: " . $result['body'] . "\n" . $c['reset'];
+            if (strpos($result['body'], 'ERROR_ZERO_BALANCE') !== false ||
+                strpos($result['body'], 'ERROR_KEY_DOES_NOT_EXIST') !== false ||
+                strpos($result['body'], 'ERROR_WRONG_USER_KEY') !== false ||
+                strpos($result['body'], 'ERROR_ZERO_CAPTCHA_FILESIZE') !== false) {
+                $api_bitti = true;
+                echo $c['merah'] . "  [!] BypassAllShortlinks API bakiyesi/erişimi bitti. 7/24 çalışma durduruluyor.\n" . $c['reset'];
+            }
             return false;
         }
     }
@@ -153,6 +264,10 @@ function hCaptchaCoz($api_key, $pageurl, $sitekey) {
 // 3. ANA ÇALIŞMA DÖNGÜSÜ
 // ==========================================
 while (true) {
+    if ($api_bitti) {
+        echo $c['merah']."[!] API bittiği için betik durduruldu.\n".$c['reset'];
+        exit;
+    }
     if (empty($active_urls)) {
         clear();
         echo $c['merah']."[!] TÜM FAUCETLER LİMİTE TAKILDI VEYA BAKİYE BİTTİ!\n[!] BETİK OTOMATİK OLARAK DURDURULDU.\n".$c['reset'];
@@ -284,6 +399,7 @@ while (true) {
                     echo $c['merah']."  [-] Claim durumu bilinmiyor / yükleme başarısız.\n".$c['reset'];
                 }
             } else {
+                if ($api_bitti) exit;
                 echo $c['merah']."[-] Bypass başarısız, bu koin atlanıyor...\n".$c['reset'];
             }
         } 
@@ -363,6 +479,7 @@ while (true) {
                     echo $c['merah']."  [-] Claim durumu bilinmiyor.\n".$c['reset'];
                 }
             } else {
+                if ($api_bitti) exit;
                 echo $c['merah']."[-] Bypass başarısız, bu koin atlanıyor...\n".$c['reset'];
             }
         }
