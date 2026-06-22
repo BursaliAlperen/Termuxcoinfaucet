@@ -4,14 +4,14 @@ declare(strict_types=1);
 date_default_timezone_set('Europe/Istanbul');
 
 const APP_NAME = 'NınokıCoın V1 Faucet Bot';
-const CONNECT_TIMEOUT = 5;
-const REQUEST_TIMEOUT = 12;
-const CAPTCHA_CONNECT_TIMEOUT = 5;
-const CAPTCHA_REQUEST_TIMEOUT = 10;
-const CAPTCHA_POLL_INTERVAL = 2;
-const CAPTCHA_MAX_ATTEMPTS = 45;
-const STEP_RETRY_LIMIT = 2;
-const STEP_RETRY_DELAY_US = 250000;
+const CONNECT_TIMEOUT = 3;
+const REQUEST_TIMEOUT = 8;
+const CAPTCHA_CONNECT_TIMEOUT = 3;
+const CAPTCHA_REQUEST_TIMEOUT = 7;
+const CAPTCHA_POLL_INTERVAL = 1;
+const CAPTCHA_MAX_ATTEMPTS = 75;
+const STEP_RETRY_LIMIT = 1;
+const STEP_RETRY_DELAY_US = 150000;
 const DEFAULT_LOOP_SLEEP = 60;
 const MAX_RECOVERABLE_ERRORS = 5;
 
@@ -32,6 +32,8 @@ $logFile = $baseDir . '/ninokicoin.log';
 $pidFile = $baseDir . '/ninokicoin.pid';
 $lockFile = $baseDir . '/ninokicoin.lock';
 $api_bitti = false;
+$daemonMode = in_array('--run-daemon', $argv, true);
+$backgroundMode = in_array('--background', $argv, true) || in_array('--arka-plan', $argv, true);
 $shutdownRequested = false;
 $lockHandle = null;
 $curlPool = [];
@@ -94,6 +96,50 @@ function clearScreen(): void
 {
     global $daemonMode;
     if (!$daemonMode && PHP_SAPI === 'cli') echo "\033[2J\033[H";
+}
+
+function coinIcon(string $coin): string
+{
+    return match (true) {
+        str_contains($coin, 'USDT') => '💵',
+        str_contains($coin, 'LTC') => 'Ł',
+        str_contains($coin, 'DOGE') => 'Ð',
+        str_contains($coin, 'TRX') => '♦',
+        str_contains($coin, 'SOL') => '◎',
+        str_contains($coin, 'PEPE') => '🐸',
+        str_contains($coin, 'BCH') => 'Ƀ',
+        default => '◉',
+    };
+}
+
+function renderBanner(array $stats, int $loopNo, int $activeCount, string $coin = ''): void
+{
+    global $daemonMode, $c;
+    if ($daemonMode) return;
+    clearScreen();
+    $target = $coin !== '' ? coinIcon($coin) . ' ' . $coin : 'Hazır';
+    echo $c['cyan'] . "╔════════════════════════════════════════════════════════════╗\n";
+    echo "║" . $c['putih'] . "        🚀 NINOKICOIN HIZLI CLAIM PANELİ 🚀        " . $c['cyan'] . "║\n";
+    echo "╠════════════════════════════════════════════════════════════╣\n";
+    echo "║ Döngü: " . $c['kuning'] . str_pad((string)$loopNo, 4) . $c['cyan'] . "  Hedef: " . $c['hijau'] . str_pad($target, 20) . $c['cyan'] . " Aktif: " . $c['putih'] . str_pad((string)$activeCount, 3) . $c['cyan'] . " ║\n";
+    echo "║ Deneme: " . $c['kuning'] . str_pad((string)$stats['deneme'], 5) . $c['cyan'] . " Başarılı: " . $c['hijau'] . str_pad((string)$stats['basarili'], 5) . $c['cyan'] . " Başarısız: " . $c['merah'] . str_pad((string)$stats['basarisiz'], 5) . $c['cyan'] . " Limit: " . $c['kuning'] . str_pad((string)$stats['limit'], 4) . $c['cyan'] . "║\n";
+    echo "╚════════════════════════════════════════════════════════════╝\n" . $c['reset'];
+}
+
+function loadingIntro(): void
+{
+    global $daemonMode, $c;
+    if ($daemonMode) return;
+    clearScreen();
+    echo $c['cyan'] . "╔════════════════════════════════════════════════════════════╗\n";
+    echo "║" . $c['putih'] . "             NINOKICOIN FAST MODE LOADING           " . $c['cyan'] . "║\n";
+    echo "╚════════════════════════════════════════════════════════════╝\n" . $c['reset'];
+    $frames = ['⚡', '🚀', '🪙', '✅'];
+    for ($i = 0; $i < 8; $i++) {
+        echo $c['hijau'] . "\r  " . $frames[$i % count($frames)] . " hızlı claim motoru hazırlanıyor..." . $c['reset'];
+        usleep(50000);
+    }
+    echo "\n";
 }
 
 function acquireLock(string $lockFile): bool
@@ -180,7 +226,7 @@ function curlRequest(string $url, string $method = 'GET', array|string $data = [
             return ['ok' => true, 'body' => substr($raw, $headerSize), 'headers' => substr($raw, 0, $headerSize), 'http_code' => (int)$info['http_code'], 'error' => null];
         }
         writeLog("HTTP hata/yeniden deneme ($attempt): $url code=" . ($info['http_code'] ?? 0) . " errno=$errno err=$err", 'WARN');
-        if ($attempt < $retries) usleep(STEP_RETRY_DELAY_US * ($attempt + 1));
+        if ($attempt < $retries) usleep(STEP_RETRY_DELAY_US);
     }
     return ['ok' => false, 'body' => '', 'headers' => '', 'http_code' => (int)($info['http_code'] ?? 0), 'error' => $err ?: 'HTTP error'];
 }
@@ -246,10 +292,37 @@ function hCaptchaCoz(string $api_key, string $pageurl, string $sitekey): string|
     return false;
 }
 
-function hasLimitSignal(string $html): bool
+function limitReason(string $text): ?string
 {
-    $s = strtolower($html);
-    return str_contains($s, 'anti fraud') || str_contains($s, 'antifraud') || str_contains($s, 'anti-fraud') || str_contains($s, 'daily claim limit') || str_contains($s, 'sufficient funds');
+    $s = strtolower(strip_tags($text));
+    $patterns = [
+        'daily claim limit' => 'günlük claim limiti',
+        'you have reached' => 'claim limiti',
+        'come back later' => 'cooldown/tekrar deneme süresi',
+        'please wait' => 'cooldown/tekrar deneme süresi',
+        'anti-fraud' => 'anti-fraud',
+        'anti fraud' => 'anti-fraud',
+        'antifraud' => 'anti-fraud',
+        'insufficient funds' => 'faucet bakiyesi yetersiz',
+        'not enough funds' => 'faucet bakiyesi yetersiz',
+        'faucet does not have' => 'faucet bakiyesi yetersiz',
+    ];
+    foreach ($patterns as $needle => $reason) if (str_contains($s, $needle)) return $reason;
+    return null;
+}
+
+function pageLimitReason(string $html): ?string
+{
+    foreach (['danger', 'warning', 'info'] as $type) {
+        $alert = extractAlert($html, $type);
+        if ($alert && ($reason = limitReason($alert))) return $reason;
+    }
+    return null;
+}
+
+function statusForLimitReason(string $reason): string
+{
+    return str_contains($reason, 'cooldown') ? 'cooldown' : 'limit';
 }
 
 function claimOne(string $coin, string $target_url, string $email, string $api_key, string $cookieFile): string
@@ -264,7 +337,7 @@ function claimOne(string $coin, string $target_url, string $email, string $api_k
     $req = curlRequest($target_url, 'GET', [], $headers, $cookieFile);
     if (!$req['ok'] || $req['body'] === '') { out('  [-] Sayfa alınamadı: ' . ($req['error'] ?? 'boş yanıt'), 'merah'); return 'retry'; }
     $html = $req['body'];
-    if (hasLimitSignal($html)) { out("  [!] Limit/anti-fraud algılandı: $coin", 'merah'); return 'limit'; }
+    if ($reason = pageLimitReason($html)) { out("  [!] Limit/cooldown algılandı ($reason): $coin", 'merah'); return statusForLimitReason($reason); }
 
     $form = parseForm($html, $target_url, $origin);
     $isExcoin = str_contains($host, 'excoinbit.online');
@@ -272,7 +345,7 @@ function claimOne(string $coin, string $target_url, string $email, string $api_k
     if (!$isExcoin && $form['session_token'] === '') {
         $alert = extractAlert($html, 'danger');
         out('  [-] Session Token alınamadı.' . ($alert ? " Web bilgisi: $alert" : ''), 'merah');
-        return $alert && hasLimitSignal($alert) ? 'limit' : 'retry';
+        return ($alert && ($reason = limitReason($alert))) ? statusForLimitReason($reason) : 'retry';
     }
 
     $captcha = hCaptchaCoz($api_key, $target_url, $form['sitekey']);
@@ -287,18 +360,18 @@ function claimOne(string $coin, string $target_url, string $email, string $api_k
     $post = curlRequest($form['post_url'], 'POST', $payload, $headers, $cookieFile);
     if (!$post['ok']) return 'retry';
     $body = $post['body'];
-    if (hasLimitSignal($body)) { out("  [!] Limit/bakiye/anti-fraud algılandı: $coin", 'merah'); return 'limit'; }
     if ($msg = extractAlert($body, 'success')) { out("  [+] BAŞARILI ($coin): $msg", 'hijau'); return 'success'; }
-    if ($msg = extractAlert($body, 'danger')) { out("  [-] BAŞARISIZ ($coin): $msg", 'merah'); return hasLimitSignal($msg) ? 'limit' : 'failed'; }
+    if ($msg = extractAlert($body, 'danger')) {
+        out("  [-] BAŞARISIZ ($coin): $msg", 'merah');
+        return ($reason = limitReason($msg)) ? statusForLimitReason($reason) : 'failed';
+    }
+    if ($reason = pageLimitReason($body)) { out("  [!] Limit/cooldown algılandı ($reason): $coin", 'merah'); return statusForLimitReason($reason); }
     out('  [-] Claim durumu bilinmiyor.', 'merah');
     return 'failed';
 }
 
 if (in_array('--stop', $argv, true)) arkaPlanDurdur();
 if (in_array('--status', $argv, true)) arkaPlanDurumu();
-
-$daemonMode = in_array('--run-daemon', $argv, true);
-$backgroundMode = in_array('--background', $argv, true) || in_array('--arka-plan', $argv, true);
 
 if (PHP_SAPI === 'cli' && function_exists('pcntl_signal')) {
     pcntl_async_signals(true);
@@ -313,8 +386,8 @@ if ($daemonMode) {
     if (!acquireLock($lockFile)) { writeLog('Başka bir kopya çalışıyor, çıkılıyor.', 'WARN'); exit(0); }
     file_put_contents($pidFile, (string)getmypid());
 } else {
-    clearScreen();
-    out(APP_NAME . ' hazırlanıyor', 'cyan');
+    loadingIntro();
+    out(APP_NAME . ' hazır', 'cyan');
     echo $c['putih'] . 'FaucetPay e-posta adresinizi girin: ' . $c['reset'];
     $email = trim((string)fgets(STDIN));
     echo $c['putih'] . 'BypassAllShortlinks API anahtarınızı girin: ' . $c['reset'];
@@ -333,6 +406,7 @@ register_shutdown_function(function () use ($pidFile, &$curlPool): void {
 
 $istatistik = ['deneme' => 0, 'basarili' => 0, 'basarisiz' => 0, 'limit' => 0];
 $recoverableErrors = 0;
+$loopNo = 1;
 
 while (!$shutdownRequested) {
     if ($api_bitti) { out('[!] API bittiği için betik durduruldu.', 'merah'); break; }
@@ -341,12 +415,13 @@ while (!$shutdownRequested) {
     foreach (array_keys($active_urls) as $coin) {
         if ($shutdownRequested || $api_bitti || !isset($active_urls[$coin])) break;
         $istatistik['deneme']++;
-        clearScreen();
-        out("Hedef: $coin | Aktif: " . count($active_urls) . " | Deneme: {$istatistik['deneme']} | Başarılı: {$istatistik['basarili']} | Başarısız: {$istatistik['basarisiz']} | Limit: {$istatistik['limit']}", 'cyan');
+        renderBanner($istatistik, $loopNo, count($active_urls), $coin);
+        out("[Döngü $loopNo] " . coinIcon($coin) . " $coin claim başlıyor", 'cyan');
 
         $status = claimOne($coin, $active_urls[$coin], $email, $api_key, $cookieFile);
         if ($status === 'success') { $istatistik['basarili']++; $recoverableErrors = 0; }
         elseif ($status === 'limit') { $istatistik['limit']++; unset($active_urls[$coin]); $recoverableErrors = 0; }
+        elseif ($status === 'cooldown') { $recoverableErrors = 0; }
         elseif ($status === 'api_stop') { $api_bitti = true; break; }
         else { $istatistik['basarisiz']++; $recoverableErrors++; }
 
@@ -356,7 +431,7 @@ while (!$shutdownRequested) {
             safeSleep(10);
             $recoverableErrors = 0;
         } else {
-            usleep(200000);
+            usleep(50000);
         }
     }
 
@@ -366,7 +441,8 @@ while (!$shutdownRequested) {
             if (str_contains($name, 'PEPE-EXCOIN')) $sleep = max($sleep, 180);
             elseif (str_contains($name, 'EXCOIN')) $sleep = max($sleep, 120);
         }
-        out("[5] Döngü bitti. Dinamik bekleme: $sleep sn", 'kuning');
+        out("[Döngü $loopNo] Tüm aktif coinler tamamlandı. Sonraki döngü için bekleme: $sleep sn", 'kuning');
+        $loopNo++;
         safeSleep($sleep);
     }
 }
