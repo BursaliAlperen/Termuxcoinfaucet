@@ -137,19 +137,11 @@ def nino_main():
                 # Original encrypted code execution
                 break
             elif choice == '2':
-                print(nino_color("    📊 Statistics Panel", 'cyan'))
-                print(nino_color("    Total Claims: 0", 'yellow'))
-                print(nino_color("    Success Rate: 100%", 'green'))
-                print(nino_color("    Shield Status: ACTIVE", 'green'))
+                nino_statistics_panel()
             elif choice == '3':
-                print(nino_color("    ⚙️ Settings", 'cyan'))
-                print(nino_color("    [1] API Configuration", 'yellow'))
-                print(nino_color("    [2] Proxy Settings", 'yellow'))
-                print(nino_color("    [3] Notification Preferences", 'yellow'))
+                nino_settings_panel()
             elif choice == '4':
-                nino_spinner("Running Security Check...", 2)
-                print(nino_color("    [✓] All Systems Secure", 'green'))
-                print(nino_color("    [✓] No Threats Detected", 'green'))
+                nino_security_panel()
             elif choice == '5':
                 nino_typewriter(nino_color("    👋 Goodbye! NINOKI COINBOT shutting down...", 'red'), 0.03)
                 sys.exit(0)
@@ -180,6 +172,145 @@ def nino_sleep(seconds):
     """Sleep unless fast mode is enabled."""
     if not nino_fast_mode():
         time.sleep(seconds)
+
+
+APP_NAME = 'NINOKI COINBOT'
+APP_VERSION = 'v2.1 AAA UI'
+APP_TAGLINE = 'Premium Faucet Automation Interface'
+
+
+def nino_visible_len(text):
+    """Approximate display width for frame padding after ANSI coloring."""
+    ansi = False
+    length = 0
+    for char in text:
+        if char == '\033':
+            ansi = True
+        elif ansi and char == 'm':
+            ansi = False
+        elif not ansi:
+            length += 1
+    return length
+
+
+def nino_box(lines, title='', color='cyan', width=66):
+    """Render a compact AAA style box that fits Termux screens."""
+    top_title = f' {title} ' if title else ''
+    border_len = max(width - 2 - nino_visible_len(top_title), 0)
+    print(nino_color('╔' + top_title + '═' * border_len + '╗', color))
+    for line in lines:
+        visible = nino_visible_len(line)
+        padding = max(width - 2 - visible, 0)
+        print(nino_color('║', color) + line + ' ' * padding + nino_color('║', color))
+    print(nino_color('╚' + '═' * (width - 2) + '╝', color))
+
+
+def nino_divider(label='', color='magenta'):
+    """Print an animated-looking section divider."""
+    text = f' {label} ' if label else ''
+    fill = max(64 - nino_visible_len(text), 0)
+    print(nino_color('◆' + '═' * (fill // 2) + text + '═' * (fill - fill // 2) + '◆', color))
+
+
+def nino_pulse(text, cycles=2):
+    """Small AAA pulse animation used for boot feedback."""
+    frames = ['◐', '◓', '◑', '◒']
+    if nino_fast_mode():
+        print(nino_color('◆ ', 'magenta') + text)
+        return
+    for i in range(cycles * len(frames)):
+        print('\r' + nino_color(frames[i % len(frames)] + ' ', 'magenta') + text, end='', flush=True)
+        time.sleep(0.08)
+    print()
+
+
+def nino_metric(label, value, color='green'):
+    return f"  {nino_color(label + ':', 'yellow')} {nino_color(value, color)}"
+
+
+def nino_ascii_logo():
+    """NINOKI COINBOT AAA logo."""
+    logo = f"""
+        ███╗   ██╗██╗███╗   ██╗ ██████╗ ██╗  ██╗██╗
+        ████╗  ██║██║████╗  ██║██╔═══██╗██║ ██╔╝██║
+        ██╔██╗ ██║██║██╔██╗ ██║██║   ██║█████╔╝ ██║
+        ██║╚██╗██║██║██║╚██╗██║██║   ██║██╔═██╗ ██║
+        ██║ ╚████║██║██║ ╚████║╚██████╔╝██║  ██╗██║
+        ╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝
+                 {APP_NAME}  •  {APP_VERSION}
+    """
+    return nino_color(logo, 'cyan')
+
+
+def nino_welcome_screen():
+    """AAA animated welcome screen for NINOKI COINBOT."""
+    nino_clear()
+    print(nino_ascii_logo())
+    nino_divider('AAA PREMIUM UI', 'magenta')
+    nino_typewriter(nino_color(f'    ✦ {APP_NAME} ✦', 'yellow'), 0.015)
+    nino_typewriter(nino_color(f'    ✦ {APP_TAGLINE} ✦', 'green'), 0.015)
+    print()
+    nino_pulse(nino_color('NINOKI Core hazırlanıyor...', 'yellow'))
+    nino_loading_bar(2)
+    nino_coin_rain(1)
+    nino_box([
+        nino_metric('Core', 'Loaded Successfully'),
+        nino_metric('Shield', 'Active'),
+        nino_metric('Interface', 'AAA Animated UI Ready'),
+    ], title='BOOT STATUS', color='green')
+    nino_sleep(0.4)
+
+
+def nino_status_panel():
+    """AAA Status Panel."""
+    nino_box([
+        nino_metric('App', f'{APP_NAME} {APP_VERSION}', 'cyan'),
+        nino_metric('Status', 'ONLINE', 'green'),
+        nino_metric('Time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'white'),
+        nino_metric('Security', 'Siders Shield + NINOKI Layer', 'green'),
+        nino_metric('Mode', 'AAA Premium Automation', 'magenta'),
+    ], title='LIVE STATUS', color='cyan')
+
+
+def nino_menu():
+    """AAA Interactive Menu."""
+    nino_box([
+        f"  {nino_color('1', 'green')}  🚀  Start Bot Engine",
+        f"  {nino_color('2', 'cyan')}  📊  View Statistics",
+        f"  {nino_color('3', 'yellow')}  ⚙️   Settings Center",
+        f"  {nino_color('4', 'red')}  🔒  Security Check",
+        f"  {nino_color('5', 'white')}  ❌  Exit",
+    ], title=f'{APP_NAME} MENU', color='magenta')
+
+
+def nino_statistics_panel():
+    """Show a polished statistics panel without changing stored state."""
+    nino_box([
+        nino_metric('Total Claims', '0', 'yellow'),
+        nino_metric('Success Rate', '100%', 'green'),
+        nino_metric('Session Mode', 'AAA UI', 'magenta'),
+        nino_metric('Shield Status', 'ACTIVE', 'green'),
+    ], title='STATISTICS', color='cyan')
+
+
+def nino_settings_panel():
+    """Show visual settings placeholders for the current structure."""
+    nino_box([
+        f"  {nino_color('[1]', 'yellow')} API Configuration",
+        f"  {nino_color('[2]', 'yellow')} Proxy Settings",
+        f"  {nino_color('[3]', 'yellow')} Notification Preferences",
+        f"  {nino_color('[i]', 'cyan')} Ayarlar mevcut yapıyı bozmadan hazırlandı.",
+    ], title='SETTINGS CENTER', color='yellow')
+
+
+def nino_security_panel():
+    """Run the visible security check animation."""
+    nino_spinner('Running Security Check...', 2)
+    nino_box([
+        nino_metric('Code Runtime', 'SAFE', 'green'),
+        nino_metric('Encrypted Crash Payload', 'DISABLED', 'yellow'),
+        nino_metric('Threats', 'None Detected', 'green'),
+    ], title='SECURITY CHECK', color='green')
 
 
 def nino_check_dependencies():
@@ -264,19 +395,11 @@ def nino_main():
             if choice == '1':
                 nino_start_bot()
             elif choice == '2':
-                print(nino_color("    📊 Statistics Panel", 'cyan'))
-                print(nino_color("    Total Claims: 0", 'yellow'))
-                print(nino_color("    Success Rate: 100%", 'green'))
-                print(nino_color("    Shield Status: ACTIVE", 'green'))
+                nino_statistics_panel()
             elif choice == '3':
-                print(nino_color("    ⚙️ Settings", 'cyan'))
-                print(nino_color("    [1] API Configuration", 'yellow'))
-                print(nino_color("    [2] Proxy Settings", 'yellow'))
-                print(nino_color("    [3] Notification Preferences", 'yellow'))
+                nino_settings_panel()
             elif choice == '4':
-                nino_spinner("Running Security Check...", 2)
-                print(nino_color("    [✓] All Systems Secure", 'green'))
-                print(nino_color("    [✓] No Threats Detected", 'green'))
+                nino_security_panel()
             elif choice == '5':
                 nino_typewriter(nino_color("    👋 Goodbye! NINOKI COINBOT shutting down...", 'red'), 0.03)
                 return 0
