@@ -1,507 +1,448 @@
 <?php
-error_reporting(0);
+declare(strict_types=1);
+
 date_default_timezone_set('Europe/Istanbul');
 
-// ANSI RENKLER
+const APP_NAME = 'NınokıCoın V1 Faucet Bot';
+const CONNECT_TIMEOUT = 3;
+const REQUEST_TIMEOUT = 8;
+const CAPTCHA_CONNECT_TIMEOUT = 3;
+const CAPTCHA_REQUEST_TIMEOUT = 7;
+const CAPTCHA_POLL_INTERVAL = 1;
+const CAPTCHA_MAX_ATTEMPTS = 75;
+const STEP_RETRY_LIMIT = 1;
+const STEP_RETRY_DELAY_US = 150000;
+const DEFAULT_LOOP_SLEEP = 60;
+const MAX_RECOVERABLE_ERRORS = 5;
+
+$debugMode = in_array('--debug', $argv, true) || getenv('NINOKI_DEBUG') === '1';
+error_reporting($debugMode ? E_ALL : (E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED));
+ini_set('display_errors', $debugMode ? '1' : '0');
+ini_set('log_errors', '1');
+
 $c = [
     'reset' => "\033[0m", 'putih' => "\033[1;37m", 'merah' => "\033[1;31m",
     'hijau' => "\033[1;32m", 'kuning' => "\033[1;33m", 'biru' => "\033[1;34m",
     'cyan' => "\033[1;36m", 'abu' => "\033[0;90m"
 ];
 
-$cookieFile = __DIR__ . "/cookies.txt"; // Oturum çerezleri için sabit dosya yolu
-$logFile = __DIR__ . "/ninokicoin.log";
-$pidFile = __DIR__ . "/ninokicoin.pid";
+$baseDir = __DIR__;
+$cookieFile = $baseDir . '/cookies.txt';
+$logFile = $baseDir . '/ninokicoin.log';
+$pidFile = $baseDir . '/ninokicoin.pid';
+$lockFile = $baseDir . '/ninokicoin.lock';
 $api_bitti = false;
+$daemonMode = in_array('--run-daemon', $argv, true);
+$backgroundMode = in_array('--background', $argv, true) || in_array('--arka-plan', $argv, true);
+$shutdownRequested = false;
+$lockHandle = null;
+$curlPool = [];
 
-// HEDEF URL LİSTESİ (Tüm desteklenen faucetler)
 $active_urls = [
-    // --- MIXTOSHI ---
-    "LTC-MIX"     => "https://mixtoshi.com?r=ankaralironaldo131@gmail.com",
-    "USDT-MIX"    => "https://mixtoshi.com/free-usdt?r=ankaralironaldo131@gmail.com",
-    "PEPE-MIX"    => "https://mixtoshi.com/free-pepe?r=ankaralironaldo131@gmail.com",
-    "SOL-MIX"     => "https://mixtoshi.com/free-sol?r=ankaralironaldo131@gmail.com",
-    "DOGE-MIX"    => "https://mixtoshi.com/free-doge?r=ankaralironaldo131@gmail.com",
-    "TRX-MIX"     => "https://mixtoshi.com/free-trx?r=ankaralironaldo131@gmail.com",
-
-    // --- EX-FAUCET ---
-    "LTC-EX"      => "https://ex-faucet.xyz/faucet-ltc?r=ankaralironaldo131@gmail.com",
-    "USDT-EX"     => "https://ex-faucet.xyz/faucet-usdt?r=ankaralironaldo131@gmail.com",
-    "PEPE-EX"     => "https://ex-faucet.xyz/faucet-pepe?r=ankaralironaldo131@gmail.com",
-    "SOL-EX"      => "https://ex-faucet.xyz/faucet-sol?r=ankaralironaldo131@gmail.com",
-    "DOGE-EX"     => "https://ex-faucet.xyz/faucet-doge?r=ankaralironaldo131@gmail.com",
-    "TRX-EX"      => "https://ex-faucet.xyz/faucet-trx?r=ankaralironaldo131@gmail.com",
-
-    // --- COIN VAGANZA ---
-    "USDT-VGNZ"   => "https://coinvaganza.xyz?r=ankaralironaldo131@gmail.com",
-    "LTC-VGNZ"    => "https://coinvaganza.xyz/claim-ltc?r=ankaralironaldo131@gmail.com",
-    "DOGE-VGNZ"   => "https://coinvaganza.xyz/claim-doge?r=ankaralironaldo131@gmail.com",
-    "SOL-VGNZ"    => "https://coinvaganza.xyz/claim-sol?r=ankaralironaldo131@gmail.com",
-    "PEPE-VGNZ"   => "https://coinvaganza.xyz/claim-pepe?r=ankaralironaldo131@gmail.com",
-    "BCH-VGNZ"    => "https://coinvaganza.xyz/claim-bch?r=ankaralironaldo131@gmail.com",
-    "TRX-VGNZ"    => "https://coinvaganza.xyz/claim-trx?r=ankaralironaldo131@gmail.com",
-
-    // --- EXCOINBIT (Hızlı akış) ---
-    "TRX-EXCOIN"  => "https://excoinbit.online?r=ankaralironaldo131@gmail.com",
-    "LTC-EXCOIN"  => "https://excoinbit.online/coin-ltc?r=ankaralironaldo131@gmail.com",
-    "USDT-EXCOIN" => "https://excoinbit.online/coin-usdt?r=ankaralironaldo131@gmail.com",
-    "SOL-EXCOIN"  => "https://excoinbit.online/coin-sol?r=ankaralironaldo131@gmail.com",
-    "DOGE-EXCOIN" => "https://excoinbit.online/coin-doge?r=ankaralironaldo131@gmail.com",
-    "BCH-EXCOIN"  => "https://excoinbit.online/coin-bch?r=ankaralironaldo131@gmail.com",
-    "PEPE-EXCOIN" => "https://excoinbit.online/coin-pepe?r=ankaralironaldo131@gmail.com"
+    'LTC-MIX' => 'https://mixtoshi.com?r=ankaralironaldo131@gmail.com',
+    'USDT-MIX' => 'https://mixtoshi.com/free-usdt?r=ankaralironaldo131@gmail.com',
+    'PEPE-MIX' => 'https://mixtoshi.com/free-pepe?r=ankaralironaldo131@gmail.com',
+    'SOL-MIX' => 'https://mixtoshi.com/free-sol?r=ankaralironaldo131@gmail.com',
+    'DOGE-MIX' => 'https://mixtoshi.com/free-doge?r=ankaralironaldo131@gmail.com',
+    'TRX-MIX' => 'https://mixtoshi.com/free-trx?r=ankaralironaldo131@gmail.com',
+    'LTC-EX' => 'https://ex-faucet.xyz/faucet-ltc?r=ankaralironaldo131@gmail.com',
+    'USDT-EX' => 'https://ex-faucet.xyz/faucet-usdt?r=ankaralironaldo131@gmail.com',
+    'PEPE-EX' => 'https://ex-faucet.xyz/faucet-pepe?r=ankaralironaldo131@gmail.com',
+    'SOL-EX' => 'https://ex-faucet.xyz/faucet-sol?r=ankaralironaldo131@gmail.com',
+    'DOGE-EX' => 'https://ex-faucet.xyz/faucet-doge?r=ankaralironaldo131@gmail.com',
+    'TRX-EX' => 'https://ex-faucet.xyz/faucet-trx?r=ankaralironaldo131@gmail.com',
+    'USDT-VGNZ' => 'https://coinvaganza.xyz?r=ankaralironaldo131@gmail.com',
+    'LTC-VGNZ' => 'https://coinvaganza.xyz/claim-ltc?r=ankaralironaldo131@gmail.com',
+    'DOGE-VGNZ' => 'https://coinvaganza.xyz/claim-doge?r=ankaralironaldo131@gmail.com',
+    'SOL-VGNZ' => 'https://coinvaganza.xyz/claim-sol?r=ankaralironaldo131@gmail.com',
+    'PEPE-VGNZ' => 'https://coinvaganza.xyz/claim-pepe?r=ankaralironaldo131@gmail.com',
+    'BCH-VGNZ' => 'https://coinvaganza.xyz/claim-bch?r=ankaralironaldo131@gmail.com',
+    'TRX-VGNZ' => 'https://coinvaganza.xyz/claim-trx?r=ankaralironaldo131@gmail.com',
+    'TRX-EXCOIN' => 'https://excoinbit.online?r=ankaralironaldo131@gmail.com',
+    'LTC-EXCOIN' => 'https://excoinbit.online/coin-ltc?r=ankaralironaldo131@gmail.com',
+    'USDT-EXCOIN' => 'https://excoinbit.online/coin-usdt?r=ankaralironaldo131@gmail.com',
+    'SOL-EXCOIN' => 'https://excoinbit.online/coin-sol?r=ankaralironaldo131@gmail.com',
+    'DOGE-EXCOIN' => 'https://excoinbit.online/coin-doge?r=ankaralironaldo131@gmail.com',
+    'BCH-EXCOIN' => 'https://excoinbit.online/coin-bch?r=ankaralironaldo131@gmail.com',
+    'PEPE-EXCOIN' => 'https://excoinbit.online/coin-pepe?r=ankaralironaldo131@gmail.com'
 ];
 
-function clear() { (PHP_OS == "Linux") ? system('clear') : pclose(popen('cls', 'w')); }
+function writeLog(string $message, string $level = 'INFO'): void
+{
+    global $logFile;
+    file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] [$level] $message\n", FILE_APPEND | LOCK_EX);
+}
 
+function out(string $message, string $color = 'reset', bool $newline = true): void
+{
+    global $c, $daemonMode;
+    $plain = preg_replace('/\033\[[0-9;]*m/', '', $message);
+    writeLog($plain);
+    if (!$daemonMode) {
+        echo ($c[$color] ?? '') . $message . ($c['reset'] ?? '') . ($newline ? "\n" : '');
+    }
+}
 
-function argDegeri($ad) {
+function argDegeri(string $ad): ?string
+{
     global $argv;
     foreach ($argv as $arg) {
-        if (strpos($arg, $ad . '=') === 0) {
-            return substr($arg, strlen($ad) + 1);
-        }
+        if (strpos($arg, $ad . '=') === 0) return substr($arg, strlen($ad) + 1);
     }
     return null;
 }
 
-function calisanPid($pidFile) {
-    if (!file_exists($pidFile)) return false;
-    $pid = (int)trim(file_get_contents($pidFile));
+function clearScreen(): void
+{
+    global $daemonMode;
+    if (!$daemonMode && PHP_SAPI === 'cli') echo "\033[2J\033[H";
+}
+
+function coinIcon(string $coin): string
+{
+    return match (true) {
+        str_contains($coin, 'USDT') => '💵',
+        str_contains($coin, 'LTC') => 'Ł',
+        str_contains($coin, 'DOGE') => 'Ð',
+        str_contains($coin, 'TRX') => '♦',
+        str_contains($coin, 'SOL') => '◎',
+        str_contains($coin, 'PEPE') => '🐸',
+        str_contains($coin, 'BCH') => 'Ƀ',
+        default => '◉',
+    };
+}
+
+function renderBanner(array $stats, int $loopNo, int $activeCount, string $coin = ''): void
+{
+    global $daemonMode, $c;
+    if ($daemonMode) return;
+    clearScreen();
+    $target = $coin !== '' ? coinIcon($coin) . ' ' . $coin : 'Hazır';
+    echo $c['cyan'] . "╔════════════════════════════════════════════════════════════╗\n";
+    echo "║" . $c['putih'] . "        🚀 NINOKICOIN HIZLI CLAIM PANELİ 🚀        " . $c['cyan'] . "║\n";
+    echo "╠════════════════════════════════════════════════════════════╣\n";
+    echo "║ Döngü: " . $c['kuning'] . str_pad((string)$loopNo, 4) . $c['cyan'] . "  Hedef: " . $c['hijau'] . str_pad($target, 20) . $c['cyan'] . " Aktif: " . $c['putih'] . str_pad((string)$activeCount, 3) . $c['cyan'] . " ║\n";
+    echo "║ Deneme: " . $c['kuning'] . str_pad((string)$stats['deneme'], 5) . $c['cyan'] . " Başarılı: " . $c['hijau'] . str_pad((string)$stats['basarili'], 5) . $c['cyan'] . " Başarısız: " . $c['merah'] . str_pad((string)$stats['basarisiz'], 5) . $c['cyan'] . " Limit: " . $c['kuning'] . str_pad((string)$stats['limit'], 4) . $c['cyan'] . "║\n";
+    echo "╚════════════════════════════════════════════════════════════╝\n" . $c['reset'];
+}
+
+function loadingIntro(): void
+{
+    global $daemonMode, $c;
+    if ($daemonMode) return;
+    clearScreen();
+    echo $c['cyan'] . "╔════════════════════════════════════════════════════════════╗\n";
+    echo "║" . $c['putih'] . "             NINOKICOIN FAST MODE LOADING           " . $c['cyan'] . "║\n";
+    echo "╚════════════════════════════════════════════════════════════╝\n" . $c['reset'];
+    $frames = ['⚡', '🚀', '🪙', '✅'];
+    for ($i = 0; $i < 8; $i++) {
+        echo $c['hijau'] . "\r  " . $frames[$i % count($frames)] . " hızlı claim motoru hazırlanıyor..." . $c['reset'];
+        usleep(50000);
+    }
+    echo "\n";
+}
+
+function acquireLock(string $lockFile): bool
+{
+    global $lockHandle;
+    $lockHandle = fopen($lockFile, 'c+');
+    if (!$lockHandle || !flock($lockHandle, LOCK_EX | LOCK_NB)) return false;
+    ftruncate($lockHandle, 0);
+    fwrite($lockHandle, (string)getmypid());
+    fflush($lockHandle);
+    return true;
+}
+
+function calisanPid(string $pidFile): int|false
+{
+    if (!is_file($pidFile)) return false;
+    $pid = (int)trim((string)file_get_contents($pidFile));
     if ($pid <= 0) return false;
     if (function_exists('posix_kill') && @posix_kill($pid, 0)) return $pid;
-    if (PHP_OS_FAMILY !== 'Windows') {
-        exec('kill -0 ' . (int)$pid . ' 2>/dev/null', $out, $code);
-        if ($code === 0) return $pid;
-    }
     @unlink($pidFile);
     return false;
 }
 
-function arkaPlanBaslat($email, $api_key) {
-    global $c, $logFile, $pidFile;
-    if ($pid = calisanPid($pidFile)) {
-        echo $c['kuning']."[!] NınokıCoın zaten arka planda çalışıyor. PID: $pid\n".$c['reset'];
-        echo $c['putih']."[*] Log dosyası: $logFile\n".$c['reset'];
-        exit;
-    }
-
-    $php = escapeshellarg(PHP_BINARY);
-    $script = escapeshellarg(__FILE__);
-    $emailArg = escapeshellarg('--email=' . base64_encode($email));
-    $apiArg = escapeshellarg('--api-key=' . base64_encode($api_key));
-    $log = escapeshellarg($logFile);
-    $cmd = "nohup $php $script --run-daemon $emailArg $apiArg >> $log 2>&1 & echo $!";
-    $pid = trim(shell_exec($cmd));
-
-    if ($pid !== '') {
-        file_put_contents($pidFile, $pid);
-        echo $c['hijau']."[+] NınokıCoın 7/24 arka plan modu başlatıldı. PID: $pid\n".$c['reset'];
-        echo $c['putih']."[*] BypassAllShortlinks bakiyesi/API erişimi bitene kadar çalışır.\n".$c['reset'];
-        echo $c['putih']."[*] Log dosyası: $logFile\n".$c['reset'];
-        echo $c['putih']."[*] Durdurmak için: php " . basename(__FILE__) . " --stop\n".$c['reset'];
-    } else {
-        echo $c['merah']."[!] Arka plan modu başlatılamadı.\n".$c['reset'];
-    }
+function arkaPlanBaslat(string $email, string $api_key): void
+{
+    global $logFile, $pidFile;
+    if ($pid = calisanPid($pidFile)) { out("[!] Zaten çalışıyor. PID: $pid", 'kuning'); exit; }
+    $cmd = sprintf('nohup %s %s --run-daemon --email=%s --api-key=%s >> %s 2>&1 & echo $!', escapeshellarg(PHP_BINARY), escapeshellarg(__FILE__), escapeshellarg(base64_encode($email)), escapeshellarg(base64_encode($api_key)), escapeshellarg($logFile));
+    $pid = trim((string)shell_exec($cmd));
+    if ($pid !== '') { file_put_contents($pidFile, $pid); out("[+] Arka plan modu başlatıldı. PID: $pid", 'hijau'); out("[*] Log: $logFile", 'putih'); }
+    else out('[!] Arka plan modu başlatılamadı.', 'merah');
     exit;
 }
 
-function arkaPlanDurdur() {
-    global $c, $pidFile;
+function arkaPlanDurdur(): void
+{
+    global $pidFile;
     $pid = calisanPid($pidFile);
-    if (!$pid) {
-        echo $c['kuning']."[!] Çalışan arka plan süreci bulunamadı.\n".$c['reset'];
-        exit;
-    }
-    if (function_exists('posix_kill')) @posix_kill($pid, SIGTERM);
-    else exec('kill ' . (int)$pid . ' 2>/dev/null');
+    if (!$pid) { out('[!] Çalışan süreç bulunamadı.', 'kuning'); exit; }
+    if (function_exists('posix_kill')) @posix_kill($pid, SIGTERM); else exec('kill ' . (int)$pid . ' 2>/dev/null');
     @unlink($pidFile);
-    echo $c['hijau']."[+] Arka plan süreci durduruldu. PID: $pid\n".$c['reset'];
+    out("[+] Süreç durduruldu. PID: $pid", 'hijau');
     exit;
 }
 
-function arkaPlanDurumu() {
-    global $c, $pidFile, $logFile;
+function arkaPlanDurumu(): void
+{
+    global $pidFile, $logFile;
     $pid = calisanPid($pidFile);
-    if ($pid) {
-        echo $c['hijau']."[+] NınokıCoın arka planda çalışıyor. PID: $pid\n".$c['reset'];
-        echo $c['putih']."[*] Log dosyası: $logFile\n".$c['reset'];
-    } else {
-        echo $c['kuning']."[!] NınokıCoın arka planda çalışmıyor.\n".$c['reset'];
-    }
+    out($pid ? "[+] Arka planda çalışıyor. PID: $pid" : '[!] Arka planda çalışmıyor.', $pid ? 'hijau' : 'kuning');
+    out("[*] Log: $logFile", 'putih');
     exit;
 }
 
-function skibidixxx($url, $method = 'GET', $data = [], $headers = [], $cookie_file = '') {
-    $ch = curl_init();
-    $options = [
-        CURLOPT_URL => $url, CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => true,
-        CURLOPT_FOLLOWLOCATION => true, CURLOPT_SSL_VERIFYHOST => 0, CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_HTTPHEADER => $headers, CURLOPT_CONNECTTIMEOUT => 30, CURLOPT_TIMEOUT => 30,
-        CURLOPT_COOKIEFILE => $cookie_file, CURLOPT_COOKIEJAR => $cookie_file
-    ];
-    if (strtoupper($method) === 'POST') {
-        $options[CURLOPT_POST] = true;
-        $options[CURLOPT_POSTFIELDS] = is_array($data) ? http_build_query($data) : $data;
+function shutdownNow(): void { global $shutdownRequested; $shutdownRequested = true; writeLog('Durdurma sinyali alındı.'); }
+function safeSleep(int $seconds): void { global $shutdownRequested; for ($i = 0; $i < $seconds && !$shutdownRequested; $i++) sleep(1); }
+
+function curlRequest(string $url, string $method = 'GET', array|string $data = [], array $headers = [], string $cookie_file = '', int $connectTimeout = CONNECT_TIMEOUT, int $timeout = REQUEST_TIMEOUT, int $retries = STEP_RETRY_LIMIT): array
+{
+    global $curlPool;
+    $host = parse_url($url, PHP_URL_HOST) ?: 'default';
+    $key = $host . '|' . $cookie_file;
+    $ch = $curlPool[$key] ?? curl_init();
+    $curlPool[$key] = $ch;
+    $baseHeaders = array_merge(['Connection: keep-alive', 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding: gzip, deflate'], $headers);
+    $postFields = is_array($data) ? http_build_query($data) : $data;
+
+    for ($attempt = 0; $attempt <= $retries; $attempt++) {
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url, CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => true,
+            CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 3, CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => false, CURLOPT_HTTPHEADER => $baseHeaders,
+            CURLOPT_CONNECTTIMEOUT => $connectTimeout, CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_ENCODING => '', CURLOPT_TCP_KEEPALIVE => 1, CURLOPT_FORBID_REUSE => false,
+            CURLOPT_FRESH_CONNECT => false, CURLOPT_COOKIEFILE => $cookie_file, CURLOPT_COOKIEJAR => $cookie_file,
+            CURLOPT_POST => strtoupper($method) === 'POST', CURLOPT_POSTFIELDS => strtoupper($method) === 'POST' ? $postFields : null,
+        ]);
+        $raw = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $err = curl_error($ch);
+        $info = curl_getinfo($ch);
+        if ($raw !== false && $errno === 0 && (int)($info['http_code'] ?? 0) < 500) {
+            $headerSize = (int)($info['header_size'] ?? 0);
+            return ['ok' => true, 'body' => substr($raw, $headerSize), 'headers' => substr($raw, 0, $headerSize), 'http_code' => (int)$info['http_code'], 'error' => null];
+        }
+        writeLog("HTTP hata/yeniden deneme ($attempt): $url code=" . ($info['http_code'] ?? 0) . " errno=$errno err=$err", 'WARN');
+        if ($attempt < $retries) usleep(STEP_RETRY_DELAY_US);
     }
-    curl_setopt_array($ch, $options);
-    $res = curl_exec($ch);
-    $err = curl_error($ch);
-    $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-    curl_close($ch);
-    
-    if ($res === false) { return ['body' => "CURL_ERROR: $err", 'headers' => '']; }
-    return ['body' => substr($res, $header_size), 'headers' => substr($res, 0, $header_size)];
+    return ['ok' => false, 'body' => '', 'headers' => '', 'http_code' => (int)($info['http_code'] ?? 0), 'error' => $err ?: 'HTTP error'];
 }
 
-// ==========================================
-// 1. BAŞLANGIÇ VE KULLANICI BİLGİLERİ
-// ==========================================
-function yukleniyor($mesaj = "NınokıCoın hazırlanıyor") {
-    global $c;
-    clear();
-    echo $c['cyan']."╔════════════════════════════════════════════════════════════╗\n";
-    echo $c['cyan']."║".$c['putih']."                 NINOKICOIN V1 FAUCET BOT                 ".$c['cyan']."║\n";
-    echo $c['cyan']."║".$c['kuning']."              Güvenli başlangıç ve kontrol modu            ".$c['cyan']."║\n";
-    echo $c['cyan']."╚════════════════════════════════════════════════════════════╝\n".$c['reset'];
-    $animasyon = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
-    for ($i = 0; $i < 20; $i++) {
-        echo $c['hijau']."\r  ".$animasyon[$i % count($animasyon)]." $mesaj... ".$c['reset'];
-        usleep(80000);
+function resolveUrl(string $base, string $origin, string $action): string
+{
+    if ($action === '' || str_starts_with($action, '#')) return $base;
+    if (preg_match('~^https?://~i', $action)) return $action;
+    return str_starts_with($action, '/') ? $origin . $action : rtrim(dirname($base), '/') . '/' . $action;
+}
+
+function parseForm(string $html, string $target_url, string $origin): array
+{
+    preg_match('/<form[^>]+method=["\']?POST["\']?[^>]*action=["\']([^"\']+)["\']/i', $html, $mAction);
+    preg_match('/<input[^>]+type=["\']?text["\']?[^>]+name=["\']([^"\']+)["\']/i', $html, $mEmail);
+    preg_match('/name=["\']session-token["\']\s*value=["\']([^"\']+)["\']/i', $html, $mToken);
+    preg_match('/data-sitekey=["\']([^"\']+)["\']/i', $html, $mSitekey);
+    preg_match_all('/<input[^>]+type=["\']?hidden["\']?[^>]+name=["\']([^"\']+)["\'][^>]*value=["\']([^"\']*)["\']/i', $html, $hidden);
+    $hiddenFields = [];
+    foreach (($hidden[1] ?? []) as $i => $name) if ($name !== 'captcha') $hiddenFields[$name] = $hidden[2][$i] ?? '';
+    return [
+        'post_url' => resolveUrl($target_url, $origin, $mAction[1] ?? ''),
+        'email_name' => $mEmail[1] ?? '',
+        'session_token' => $mToken[1] ?? '',
+        'sitekey' => $mSitekey[1] ?? 'b56ad4c0-05d6-4218-b604-a54c67a8cede',
+        'hidden' => $hiddenFields,
+    ];
+}
+
+function extractAlert(string $html, string $type = 'success'): ?string
+{
+    if (!preg_match('/<div class="alert alert-' . preg_quote($type, '/') . '[^>]*>(.*?)<\/div>/is', $html, $m)) return null;
+    return trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $m[1]))));
+}
+
+function hCaptchaCoz(string $api_key, string $pageurl, string $sitekey): string|false
+{
+    global $api_bitti;
+    out('  [~] hCaptcha görevi API\'ye gönderiliyor...', 'kuning');
+    $headers = ['User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)'];
+    $inUrl = 'https://bypassallshortlinks.space/in.php?key=' . urlencode($api_key) . '&method=hcaptcha&pageurl=' . urlencode($pageurl) . '&sitekey=' . urlencode($sitekey);
+    $submit = curlRequest($inUrl, 'GET', [], $headers, '', CAPTCHA_CONNECT_TIMEOUT, CAPTCHA_REQUEST_TIMEOUT, 1);
+    if (!$submit['ok'] || !str_starts_with(trim($submit['body']), 'OK|')) {
+        out('  [!] API gönderimi başarısız: ' . ($submit['body'] ?: $submit['error']), 'merah');
+        if (str_contains($submit['body'], 'ERROR_ZERO_BALANCE') || str_contains($submit['body'], 'ERROR_KEY_DOES_NOT_EXIST') || str_contains($submit['body'], 'ERROR_WRONG_USER_KEY')) $api_bitti = true;
+        return false;
     }
-    echo "\n";
+    $taskId = explode('|', trim($submit['body']), 2)[1] ?? '';
+    for ($attempt = 1; $attempt <= CAPTCHA_MAX_ATTEMPTS; $attempt++) {
+        safeSleep(CAPTCHA_POLL_INTERVAL);
+        $resUrl = 'https://bypassallshortlinks.space/res.php?key=' . urlencode($api_key) . '&id=' . urlencode($taskId);
+        $result = curlRequest($resUrl, 'GET', [], $headers, '', CAPTCHA_CONNECT_TIMEOUT, CAPTCHA_REQUEST_TIMEOUT, 1);
+        $body = trim($result['body']);
+        if (str_starts_with($body, 'OK|')) { out('  [+] hCaptcha çözüldü.', 'hijau'); return explode('|', $body, 2)[1] ?? false; }
+        if (str_contains($body, 'CAPCHA_NOT_READY') || str_contains($body, 'ERROR_SOLVE_PENDING') || !$result['ok']) continue;
+        if (str_contains($body, 'ERROR')) {
+            out("  [!] API hatası: $body", 'merah');
+            if (str_contains($body, 'ERROR_ZERO_BALANCE') || str_contains($body, 'ERROR_KEY_DOES_NOT_EXIST') || str_contains($body, 'ERROR_WRONG_USER_KEY')) $api_bitti = true;
+            return false;
+        }
+    }
+    out('  [!] hCaptcha zaman aşımı: maksimum deneme sayısına ulaşıldı.', 'merah');
+    return false;
+}
+
+function limitReason(string $text): ?string
+{
+    $s = strtolower(strip_tags($text));
+    $patterns = [
+        'daily claim limit' => 'günlük claim limiti',
+        'you have reached' => 'claim limiti',
+        'come back later' => 'cooldown/tekrar deneme süresi',
+        'please wait' => 'cooldown/tekrar deneme süresi',
+        'anti-fraud' => 'anti-fraud',
+        'anti fraud' => 'anti-fraud',
+        'antifraud' => 'anti-fraud',
+        'insufficient funds' => 'faucet bakiyesi yetersiz',
+        'not enough funds' => 'faucet bakiyesi yetersiz',
+        'faucet does not have' => 'faucet bakiyesi yetersiz',
+    ];
+    foreach ($patterns as $needle => $reason) if (str_contains($s, $needle)) return $reason;
+    return null;
+}
+
+function pageLimitReason(string $html): ?string
+{
+    foreach (['danger', 'warning', 'info'] as $type) {
+        $alert = extractAlert($html, $type);
+        if ($alert && ($reason = limitReason($alert))) return $reason;
+    }
+    return null;
+}
+
+function statusForLimitReason(string $reason): string
+{
+    return str_contains($reason, 'cooldown') ? 'cooldown' : 'limit';
+}
+
+function claimOne(string $coin, string $target_url, string $email, string $api_key, string $cookieFile): string
+{
+    global $api_bitti;
+    $parsed = parse_url($target_url);
+    $host = $parsed['host'] ?? '';
+    $origin = ($parsed['scheme'] ?? 'https') . '://' . $host;
+    $headers = ["Host: $host", 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36', "Origin: $origin", "Referer: $target_url", 'Content-Type: application/x-www-form-urlencoded'];
+
+    out("[1] Sayfa açılıyor: $coin", 'biru');
+    $req = curlRequest($target_url, 'GET', [], $headers, $cookieFile);
+    if (!$req['ok'] || $req['body'] === '') { out('  [-] Sayfa alınamadı: ' . ($req['error'] ?? 'boş yanıt'), 'merah'); return 'retry'; }
+    $html = $req['body'];
+    if ($reason = pageLimitReason($html)) { out("  [!] Limit/cooldown algılandı ($reason): $coin", 'merah'); return statusForLimitReason($reason); }
+
+    $form = parseForm($html, $target_url, $origin);
+    $isExcoin = str_contains($host, 'excoinbit.online');
+    if ($isExcoin && $form['email_name'] === '') { out('  [-] E-posta alanı bulunamadı.', 'merah'); return 'retry'; }
+    if (!$isExcoin && $form['session_token'] === '') {
+        $alert = extractAlert($html, 'danger');
+        out('  [-] Session Token alınamadı.' . ($alert ? " Web bilgisi: $alert" : ''), 'merah');
+        return ($alert && ($reason = limitReason($alert))) ? statusForLimitReason($reason) : 'retry';
+    }
+
+    $captcha = hCaptchaCoz($api_key, $target_url, $form['sitekey']);
+    if (!$captcha) return $api_bitti ? 'api_stop' : 'retry';
+
+    $payload = $isExcoin
+        ? [$form['email_name'] => $email, 'g-recaptcha-response' => $captcha, 'h-captcha-response' => $captcha]
+        : ['address' => $email, 'captcha' => 'hcaptcha', 'g-recaptcha-response' => $captcha, 'h-captcha-response' => $captcha, 'login' => 'Verify Captcha'];
+    $payload = array_merge($payload, $form['hidden']);
+
+    out('[3] Ödül formu gönderiliyor...', 'biru');
+    $post = curlRequest($form['post_url'], 'POST', $payload, $headers, $cookieFile);
+    if (!$post['ok']) return 'retry';
+    $body = $post['body'];
+    if ($msg = extractAlert($body, 'success')) { out("  [+] BAŞARILI ($coin): $msg", 'hijau'); return 'success'; }
+    if ($msg = extractAlert($body, 'danger')) {
+        out("  [-] BAŞARISIZ ($coin): $msg", 'merah');
+        return ($reason = limitReason($msg)) ? statusForLimitReason($reason) : 'failed';
+    }
+    if ($reason = pageLimitReason($body)) { out("  [!] Limit/cooldown algılandı ($reason): $coin", 'merah'); return statusForLimitReason($reason); }
+    out('  [-] Claim durumu bilinmiyor.', 'merah');
+    return 'failed';
 }
 
 if (in_array('--stop', $argv, true)) arkaPlanDurdur();
 if (in_array('--status', $argv, true)) arkaPlanDurumu();
 
-$daemonMode = in_array('--run-daemon', $argv, true);
-$backgroundMode = in_array('--background', $argv, true) || in_array('--arka-plan', $argv, true);
+if (PHP_SAPI === 'cli' && function_exists('pcntl_signal')) {
+    pcntl_async_signals(true);
+    pcntl_signal(SIGTERM, 'shutdownNow');
+    pcntl_signal(SIGINT, 'shutdownNow');
+}
 
 if ($daemonMode) {
     $email = base64_decode(argDegeri('--email') ?? '', true) ?: '';
     $api_key = base64_decode(argDegeri('--api-key') ?? '', true) ?: '';
-    if ($email === '' || $api_key === '') exit;
-    file_put_contents($pidFile, getmypid());
-    register_shutdown_function(function() use ($pidFile) {
-        if (file_exists($pidFile) && trim(file_get_contents($pidFile)) == getmypid()) @unlink($pidFile);
-    });
+    if ($email === '' || $api_key === '') exit(1);
+    if (!acquireLock($lockFile)) { writeLog('Başka bir kopya çalışıyor, çıkılıyor.', 'WARN'); exit(0); }
+    file_put_contents($pidFile, (string)getmypid());
 } else {
-    yukleniyor();
-    echo $c['putih']."FaucetPay e-posta adresinizi girin: ".$c['reset'];
-    $email = trim(fgets(STDIN));
-    echo $c['putih']."BypassAllShortlinks API anahtarınızı girin: ".$c['reset'];
-    $api_key = trim(fgets(STDIN));
-    if ($email === '' || $api_key === '') {
-        echo $c['merah']."[!] E-posta ve API anahtarı boş bırakılamaz.\n".$c['reset'];
-        exit;
-    }
+    loadingIntro();
+    out(APP_NAME . ' hazır', 'cyan');
+    echo $c['putih'] . 'FaucetPay e-posta adresinizi girin: ' . $c['reset'];
+    $email = trim((string)fgets(STDIN));
+    echo $c['putih'] . 'BypassAllShortlinks API anahtarınızı girin: ' . $c['reset'];
+    $api_key = trim((string)fgets(STDIN));
+    if ($email === '' || $api_key === '') { out('[!] E-posta ve API anahtarı boş bırakılamaz.', 'merah'); exit(1); }
     if ($backgroundMode) arkaPlanBaslat($email, $api_key);
+    if (!acquireLock($lockFile)) { out('[!] Başka bir kopya zaten çalışıyor.', 'kuning'); exit(0); }
+    file_put_contents($pidFile, (string)getmypid());
 }
 
-$istatistik = [
-    'deneme' => 0,
-    'basarili' => 0,
-    'basarisiz' => 0,
-    'limit' => 0
-];
+register_shutdown_function(function () use ($pidFile, &$curlPool): void {
+    foreach ($curlPool as $ch) if (is_resource($ch) || $ch instanceof CurlHandle) curl_close($ch);
+    if (is_file($pidFile) && trim((string)file_get_contents($pidFile)) === (string)getmypid()) @unlink($pidFile);
+    writeLog('Süreç kapandı.');
+});
 
-// ==========================================
-// 2. HCAPTCHA BYPASS API İŞLEVİ
-// ==========================================
-function hCaptchaCoz($api_key, $pageurl, $sitekey) {
-    global $c, $api_bitti;
-    echo $c['kuning'] . "  [~] hCaptcha görevi bypass API'sine gönderiliyor...\n" . $c['reset'];
-    
-    $safe_pageurl = urlencode($pageurl);
-    $safe_sitekey = urlencode($sitekey);
-    $in_url = "https://bypassallshortlinks.space/in.php?key=$api_key&method=hcaptcha&pageurl=$safe_pageurl&sitekey=$safe_sitekey";
-    $api_headers = ["User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)"];
-    
-    $submit = skibidixxx($in_url, 'GET', [], $api_headers);
-    
-    if (strpos($submit['body'], 'OK|') === false) {
-        echo $c['merah'] . "  [!] API gönderimi başarısız: " . $submit['body'] . "\n" . $c['reset'];
-        if (strpos($submit['body'], 'ERROR_ZERO_BALANCE') !== false ||
-            strpos($submit['body'], 'ERROR_KEY_DOES_NOT_EXIST') !== false ||
-            strpos($submit['body'], 'ERROR_WRONG_USER_KEY') !== false) {
-            $api_bitti = true;
-            echo $c['merah'] . "  [!] BypassAllShortlinks API bakiyesi/erişimi bitti. 7/24 çalışma durduruluyor.\n" . $c['reset'];
-        }
-        return false;
-    }
-    
-    $task_id = explode('|', $submit['body'])[1];
-    echo $c['biru'] . "  [~] Task ID: $task_id. Sonuç bekleniyor...\n" . $c['reset'];
-    
-    while (true) {
-        sleep(5); 
-        $res_url = "https://bypassallshortlinks.space/res.php?key=$api_key&id=$task_id";
-        $result = skibidixxx($res_url, 'GET', [], $api_headers);
-        
-        if (strpos($result['body'], 'OK|') !== false) {
-            echo $c['hijau'] . "  [+] hCaptcha başarıyla çözüldü!\n" . $c['reset'];
-            return explode('|', $result['body'])[1];
-        } 
-        if (strpos($result['body'], 'CAPCHA_NOT_READY') !== false || strpos($result['body'], 'ERROR_SOLVE_PENDING') !== false) {
-            echo $c['kuning'] . "      [-] Durum: Beklemede (API yanıtı bekleniyor)... \r" . $c['reset'];
-            continue; 
-        }
-        if (strpos($result['body'], 'ERROR') !== false) {
-            echo $c['merah'] . "\n  [!] API hatası: " . $result['body'] . "\n" . $c['reset'];
-            if (strpos($result['body'], 'ERROR_ZERO_BALANCE') !== false ||
-                strpos($result['body'], 'ERROR_KEY_DOES_NOT_EXIST') !== false ||
-                strpos($result['body'], 'ERROR_WRONG_USER_KEY') !== false ||
-                strpos($result['body'], 'ERROR_ZERO_CAPTCHA_FILESIZE') !== false) {
-                $api_bitti = true;
-                echo $c['merah'] . "  [!] BypassAllShortlinks API bakiyesi/erişimi bitti. 7/24 çalışma durduruluyor.\n" . $c['reset'];
-            }
-            return false;
-        }
-    }
-}
+$istatistik = ['deneme' => 0, 'basarili' => 0, 'basarisiz' => 0, 'limit' => 0];
+$recoverableErrors = 0;
+$loopNo = 1;
 
-// ==========================================
-// 3. ANA ÇALIŞMA DÖNGÜSÜ
-// ==========================================
-while (true) {
-    if ($api_bitti) {
-        echo $c['merah']."[!] API bittiği için betik durduruldu.\n".$c['reset'];
-        exit;
-    }
-    if (empty($active_urls)) {
-        clear();
-        echo $c['merah']."[!] TÜM FAUCETLER LİMİTE TAKILDI VEYA BAKİYE BİTTİ!\n[!] BETİK OTOMATİK OLARAK DURDURULDU.\n".$c['reset'];
-        exit;
-    }
+while (!$shutdownRequested) {
+    if ($api_bitti) { out('[!] API bittiği için betik durduruldu.', 'merah'); break; }
+    if (empty($active_urls)) { out('[!] Tüm faucetler limite takıldı veya bakiye bitti.', 'merah'); break; }
 
-    foreach ($active_urls as $coin => $target_url) {
+    foreach (array_keys($active_urls) as $coin) {
+        if ($shutdownRequested || $api_bitti || !isset($active_urls[$coin])) break;
         $istatistik['deneme']++;
-        clear();
-        echo $c['cyan']."╔════════════════════════════════════════════════════════════╗\n";
-        echo $c['cyan']."║".$c['putih']."              🚀 NINOKICOIN V1 ÇOKLU FAUCET 🚀             ".$c['cyan']."║\n";
-        echo $c['cyan']."╠════════════════════════════════════════════════════════════╣\n";
-        echo $c['putih']."  Hedef koin        : ".$c['hijau'].$coin.$c['reset']."\n";
-        echo $c['putih']."  Aktif faucet      : ".$c['hijau'].count($active_urls).$c['reset']."\n";
-        echo $c['putih']."  Toplam deneme     : ".$c['kuning'].$istatistik['deneme'].$c['reset']."\n";
-        echo $c['putih']."  Başarılı claim    : ".$c['hijau'].$istatistik['basarili'].$c['reset']."\n";
-        echo $c['putih']."  Başarısız claim   : ".$c['merah'].$istatistik['basarisiz'].$c['reset']."\n";
-        echo $c['putih']."  Limit/çıkarılan   : ".$c['kuning'].$istatistik['limit'].$c['reset']."\n";
-        echo $c['cyan']."╚════════════════════════════════════════════════════════════╝\n".$c['reset'];
+        renderBanner($istatistik, $loopNo, count($active_urls), $coin);
+        out("[Döngü $loopNo] " . coinIcon($coin) . " $coin claim başlıyor", 'cyan');
 
-        $parsed_url = parse_url($target_url);
-        $dynamic_host = $parsed_url['host'];
-        $dynamic_origin = $parsed_url['scheme'] . '://' . $dynamic_host;
+        $status = claimOne($coin, $active_urls[$coin], $email, $api_key, $cookieFile);
+        if ($status === 'success') { $istatistik['basarili']++; $recoverableErrors = 0; }
+        elseif ($status === 'limit') { $istatistik['limit']++; unset($active_urls[$coin]); $recoverableErrors = 0; }
+        elseif ($status === 'cooldown') { $recoverableErrors = 0; }
+        elseif ($status === 'api_stop') { $api_bitti = true; break; }
+        else { $istatistik['basarisiz']++; $recoverableErrors++; }
 
-        $headers = [
-            "Host: $dynamic_host",
-            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Origin: $dynamic_origin",
-            "Referer: $target_url",
-            "Content-Type: application/x-www-form-urlencoded"
-        ];
-
-        // 1. ANA SAYFAYI AL 
-        echo $c['biru']."[1] Sayfa açılıyor: $coin...\n".$c['reset'];
-        $req1 = skibidixxx($target_url, "GET", [], $headers, $cookieFile);
-        $html = $req1['body'];
-
-        // --- İLK KONTROL (ANTI-FRAUD & GENEL LİMİT) ---
-        $html_lower = strtolower($html);
-        if (strpos($html_lower, "anti fraud") !== false || 
-            strpos($html_lower, "antifraud") !== false || 
-            strpos($html_lower, "anti-fraud") !== false || 
-            strpos($html_lower, "daily claim limit") !== false || 
-            strpos($html_lower, "sufficient funds") !== false) {
-            
-            echo $c['merah']."\n  [!] DUR: İlk sayfada Anti-Fraud/Limit uyarısı algılandı: $coin!\n".$c['reset'];
-            echo $c['kuning']."  [*] Listeden çıkarılıyor: $coin ...\n".$c['reset'];
-            $istatistik['limit']++;
-            unset($active_urls[$coin]); 
-            sleep(3); 
-            continue;
+        unset($status);
+        if ($recoverableErrors >= MAX_RECOVERABLE_ERRORS) {
+            out('[!] Ardışık hata sınırı aşıldı; kısa toparlanma beklemesi uygulanıyor.', 'kuning');
+            safeSleep(10);
+            $recoverableErrors = 0;
+        } else {
+            usleep(50000);
         }
-        // ----------------------------------------------------------
-
-        // Form action URL’sini yakala; POST sırasında verinin kaybolmasını önler
-        preg_match('/<form[^>]+method="POST"[^>]+action="([^"]+)"/i', $html, $m_action);
-        $post_url = $target_url;
-        if (!empty($m_action[1])) {
-            $action_path = $m_action[1];
-            if (strpos($action_path, 'http') === false) {
-                $post_url = (substr($action_path, 0, 1) === '/') ? $dynamic_origin . $action_path : rtrim($target_url, '/') . '/' . $action_path;
-            } else {
-                $post_url = $action_path;
-            }
-        }
-
-        // ==========================================================
-        // MANTIK DALI: EXCOINBIT (Hızlı akış)
-        // ==========================================================
-        if (strpos($dynamic_host, 'excoinbit.online') !== false) {
-            
-            preg_match('/<input[^>]+type="text"[^>]+name="([^"]+)"/i', $html, $m_email_name);
-            $email_input_name = $m_email_name[1] ?? 'address'; 
-
-            preg_match('/data-sitekey="([^"]+)"/i', $html, $m_sitekey);
-            $sitekey = $m_sitekey[1] ?? 'b56ad4c0-05d6-4218-b604-a54c67a8cede';
-
-            if (empty($m_email_name[1])) {
-                echo $c['merah']."  [-] E-posta formu bulunamadı. Atlanıyor... (Bekleme/Limit olabilir)\n".$c['reset'];
-                sleep(3); continue;
-            }
-
-            echo $c['hijau']."  [+] Dinamik e-posta alanı alındı: $email_input_name\n".$c['reset'];
-            echo $c['biru']."\n[2] hCaptcha bypass başlatılıyor...\n".$c['reset'];
-            
-            $hcaptcha_token = hCaptchaCoz($api_key, $target_url, $sitekey);
-
-            if ($hcaptcha_token) {
-                echo $c['biru']."\n[3] Ödül formu gönderiliyor...\n".$c['reset'];
-                
-                $payload = [
-                    $email_input_name => $email, 
-                    "g-recaptcha-response" => $hcaptcha_token,
-                    "h-captcha-response" => $hcaptcha_token
-                ];
-
-                // Tüm hidden input alanlarını otomatik ekle
-                preg_match_all('/<input[^>]+type="hidden"[^>]+name="([^"]+)"[^>]*value="([^"]*)"/i', $html, $hiddens);
-                if (!empty($hiddens[1])) {
-                    for ($i = 0; $i < count($hiddens[1]); $i++) {
-                        if ($hiddens[1][$i] != 'captcha') $payload[$hiddens[1][$i]] = $hiddens[2][$i];
-                    }
-                }
-
-                $req2 = skibidixxx($post_url, "POST", $payload, $headers, $cookieFile);
-                $responHTML = $req2['body'];
-
-                if (preg_match('/<div class="alert alert-success[^>]*>(.*?)<\/div>/is', $responHTML, $msg)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $msg[1]))));
-                    $istatistik['basarili']++;
-                    echo $c['hijau']."  [+] BAŞARILI ($coin): $pesan\n".$c['reset'];
-                } elseif (preg_match('/<div class="alert alert-danger[^>]*>(.*?)<\/div>/is', $responHTML, $msg)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $msg[1]))));
-                    $istatistik['basarisiz']++;
-                    echo $c['merah']."  [-] BAŞARISIZ ($coin): $pesan\n".$c['reset'];
-
-                    // Anti-fraud / limit kontrolü
-                    $pesan_lower = strtolower($pesan);
-                    if (strpos($pesan_lower, 'limit') !== false ||
-                        strpos($pesan_lower, 'sufficient') !== false ||
-                        strpos($pesan_lower, 'anti-fraud') !== false ||
-                        strpos($pesan_lower, 'antifraud') !== false) {
-
-                        echo $c['kuning']."  [!] $coin yürütme listesinden çıkarılıyor...\n".$c['reset'];
-                        $istatistik['limit']++;
-                        unset($active_urls[$coin]);
-                    }
-                } else {
-                    echo $c['merah']."  [-] Claim durumu bilinmiyor / yükleme başarısız.\n".$c['reset'];
-                }
-            } else {
-                if ($api_bitti) exit;
-                echo $c['merah']."[-] Bypass başarısız, bu koin atlanıyor...\n".$c['reset'];
-            }
-        } 
-        
-        // ==========================================================
-        // MANTIK DALI: MIXTOSHI, EX-FAUCET VE COINVAGANZA
-        // ==========================================================
-        else {
-            preg_match('/name="session-token"\s*value="([^"]+)"/i', $html, $m_token);
-            preg_match('/data-sitekey="([^"]+)"/i', $html, $m_sitekey);
-            
-            $session_token = $m_token[1] ?? '';
-            $sitekey = $m_sitekey[1] ?? 'b56ad4c0-05d6-4218-b604-a54c67a8cede';
-
-            // Token alınamadığında nedeni göstermek için hata tarayıcı
-            if (empty($session_token)) {
-                echo $c['merah']."  [-] Session Token alınamadı.\n".$c['reset'];
-                if (preg_match('/<div class="alert alert-danger[^>]*>(.*?)<\/div>/is', $html, $m_alert)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $m_alert[1]))));
-                    echo $c['kuning']."  [*] Web bilgisi: $pesan\n".$c['reset'];
-                    if (strpos(strtolower($pesan), 'wait') !== false) echo $c['kuning']."  [*] Bu faucet cooldown sürecinde, şimdilik atlanıyor...\n".$c['reset'];
-                } elseif (strpos($html, 'Just a moment') !== false || strpos($html, 'cf-browser-verification') !== false) {
-                    echo $c['merah']."  [!] Cloudflare engeli! Geçerli cookie/clearance gerekiyor.\n".$c['reset'];
-                }
-                sleep(3); continue;
-            }
-
-            echo $c['hijau']."  [+] Session Token alındı!\n".$c['reset'];
-            echo $c['biru']."\n[2] hCaptcha bypass başlatılıyor...\n".$c['reset'];
-            
-            $hcaptcha_token = hCaptchaCoz($api_key, $target_url, $sitekey);
-
-            if ($hcaptcha_token) {
-                echo $c['biru']."\n[3] Ödül formu gönderiliyor...\n".$c['reset'];
-                
-                $payload = [
-                    "address" => $email,
-                    "captcha" => "hcaptcha",
-                    "g-recaptcha-response" => $hcaptcha_token, 
-                    "h-captcha-response" => $hcaptcha_token,
-                    "login" => "Verify Captcha"
-                ];
-
-                // Antibotlinks ve CSRF için tüm hidden form alanlarını ekle
-                preg_match_all('/<input[^>]+type="hidden"[^>]+name="([^"]+)"[^>]*value="([^"]*)"/i', $html, $hiddens);
-                if (!empty($hiddens[1])) {
-                    for ($i = 0; $i < count($hiddens[1]); $i++) {
-                        if ($hiddens[1][$i] != 'captcha') $payload[$hiddens[1][$i]] = $hiddens[2][$i];
-                    }
-                }
-
-                $req2 = skibidixxx($post_url, "POST", $payload, $headers, $cookieFile);
-                $responHTML = $req2['body'];
-
-                // Anti-fraud / limit kontrolü
-                $respon_lower = strtolower($responHTML);
-                if (strpos($respon_lower, "daily claim limit") !== false ||
-                    strpos($respon_lower, "sufficient funds") !== false ||
-                    strpos($respon_lower, "anti-fraud") !== false ||
-                    strpos($respon_lower, "antifraud") !== false) {
-
-                    echo $c['merah']."\n  [!] DUR: $coin için limit/bakiye/anti-fraud algılandı!\n".$c['reset'];
-                    $istatistik['limit']++;
-                    unset($active_urls[$coin]); 
-                    sleep(3); continue;
-                }
-
-                if (preg_match('/<div class="alert alert-success[^>]*>(.*?)<\/div>/is', $responHTML, $msg)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $msg[1]))));
-                    $istatistik['basarili']++;
-                    echo $c['hijau']."  [+] BAŞARILI ($coin): $pesan\n".$c['reset'];
-                } elseif (preg_match('/<div class="alert alert-danger[^>]*>(.*?)<\/div>/is', $responHTML, $msg)) {
-                    $pesan = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('&times;', '', $msg[1]))));
-                    $istatistik['basarisiz']++;
-                    echo $c['merah']."  [-] BAŞARISIZ ($coin): $pesan\n".$c['reset'];
-                } else {
-                    echo $c['merah']."  [-] Claim durumu bilinmiyor.\n".$c['reset'];
-                }
-            } else {
-                if ($api_bitti) exit;
-                echo $c['merah']."[-] Bypass başarısız, bu koin atlanıyor...\n".$c['reset'];
-            }
-        }
-
-        echo $c['kuning']."\n  [*] Sonraki koinden önce 3 saniye bekleniyor...\n".$c['reset'];
-        sleep(3);
     }
 
-    // ==========================================
-    // 5. AKILLI COOLDOWN (Kalan koine göre dinamik)
-    // ==========================================
-    if (!empty($active_urls)) {
-        $cooldown_time = 60; // Varsayılan 1 dakika
-        foreach ($active_urls as $c_name => $c_url) {
-            if (strpos($c_name, 'PEPE-EXCOIN') !== false) { $cooldown_time = max($cooldown_time, 180); } 
-            elseif (strpos($c_name, 'EXCOIN') !== false) { $cooldown_time = max($cooldown_time, 120); } 
+    if (!$shutdownRequested && !$api_bitti && !empty($active_urls)) {
+        $sleep = DEFAULT_LOOP_SLEEP;
+        foreach (array_keys($active_urls) as $name) {
+            if (str_contains($name, 'PEPE-EXCOIN')) $sleep = max($sleep, 180);
+            elseif (str_contains($name, 'EXCOIN')) $sleep = max($sleep, 120);
         }
-
-        echo $c['kuning']."\n[5] Döngü bitti. Akıllı cooldown moduna geçiliyor ($cooldown_time sn)...\n".$c['reset'];
-        for ($i = $cooldown_time; $i > 0; $i--) {
-            echo $c['abu']."  [-] Cooldown bekleniyor: $i saniye...\r".$c['reset'];
-            sleep(1);
-        }
+        out("[Döngü $loopNo] Tüm aktif coinler tamamlandı. Sonraki döngü için bekleme: $sleep sn", 'kuning');
+        $loopNo++;
+        safeSleep($sleep);
     }
 }
