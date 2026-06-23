@@ -9,23 +9,20 @@ import random
 import requests
 import shutil
 from datetime import datetime
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 # ANSI Color Codes
 H0 = "\033[0m"
-H1 = "\033[31m"   # Red
-H2 = "\033[32m"   # Green
-H3 = "\033[33m"   # Yellow
-H4 = "\033[34m"   # Blue
-H5 = "\033[35m"   # Magenta
-H6 = "\033[36m"   # Cyan
-H7 = "\033[1;97m" # Bold White
-H8 = "\033[1;32m" # Bold Green
-H9 = "\033[1;31m" # Bold Red
+H1 = "\033[31m"
+H2 = "\033[32m"
+H3 = "\033[33m"
+H4 = "\033[34m"
+H5 = "\033[35m"
+H6 = "\033[36m"
+H7 = "\033[1;97m"
+H8 = "\033[1;32m"
+H9 = "\033[1;31m"
 
-# Global variables
-TOTAL_WIN = 0
-TOTAL_SPINS = 0
+# Global stats
 SESSION_STATS = {
     "spins": 0,
     "wins": 0,
@@ -50,7 +47,6 @@ def line(char="═"):
 
 def banner():
     clear()
-    width = get_terminal_width()
     print(f"{H4}{line('═')}{H0}")
     print(center(f"{H7}╔══════════════════════════════════════╗{H0}"))
     print(center(f"{H7}║{H2}  🎰  𝐒𝐋𝐎𝐓𝐅𝐑𝐔𝐈𝐓  𝐅𝐀𝐑𝐌𝐄𝐑  🎰  {H7}║{H0}"))
@@ -58,7 +54,7 @@ def banner():
     print(center(f"{H7}║{H6}        𝐀  𝐏𝐋𝐔𝐒  𝐄𝐃𝐈𝐓𝐈𝐎𝐍        {H7}║{H0}"))
     print(center(f"{H7}╠══════════════════════════════════════╣{H0}"))
     print(center(f"{H7}║{H3}  Created By : {H5}🇦🇱𝐀𝐥𝐩𝐞𝐫𝐞𝐧𝐓𝐇𝐄{H3}          {H7}║{H0}"))
-    print(center(f"{H7}║{H3}  Version    : {H5}2.0.0                      {H7}║{H0}"))
+    print(center(f"{H7}║{H3}  Version    : {H5}2.1.0 (Debug)             {H7}║{H0}"))
     print(center(f"{H7}╚══════════════════════════════════════╝{H0}"))
     print(f"{H4}{line('═')}{H0}")
     print()
@@ -79,15 +75,15 @@ def print_status(msg, status="info"):
         print(f"{H3}[{now}] 💰 {msg}{H0}")
     elif status == "win":
         print(f"{H8}[{now}] 🎉 {msg}{H0}")
+    elif status == "debug":
+        print(f"{H3}[{now}] 🐞 {msg}{H0}")
 
-def print_info(email, balance, credits, total_win=0):
+def print_info(email, balance, credits):
     print(f"{H4}{line('─')}{H0}")
     print(f"{H6}  👤 Email          : {H7}{email}{H0}")
     print(f"{H6}  💵 Balance        : {H2}${balance:.2f}{H0}")
     print(f"{H6}  🎲 Spins Left     : {H3}{credits}{H0}")
-    if total_win > 0:
-        print(f"{H6}  🏆 Total Win      : {H2}${total_win:.2f}{H0}")
-    print(f"{H6}  📊 Session Stats  : {H5}{SESSION_STATS['spins']} spins, {SESSION_STATS['wins']} wins{H0}")
+    print(f"{H6}  📊 Session Stats  : {H5}{SESSION_STATS['spins']} spins, {SESSION_STATS['wins']} wins, ${SESSION_STATS['total_reward']:.4f} total{H0}")
     print(f"{H4}{line('─')}{H0}")
     print()
 
@@ -105,12 +101,6 @@ def login(email):
         res = requests.post(url, json=data, headers=headers, timeout=15)
         res.raise_for_status()
         res_json = res.json()
-    except requests.exceptions.Timeout:
-        print_status("Connection timeout!", "error")
-        return None, None, {}
-    except requests.exceptions.ConnectionError:
-        print_status("Connection error! Check internet.", "error")
-        return None, None, {}
     except Exception as e:
         print_status(f"Login failed: {e}", "error")
         return None, None, {}
@@ -128,7 +118,7 @@ def login(email):
     return token, user_id, res_json
 
 def spin(token, user_id):
-    """Gerçek spin işlemi - API'den ödül alır"""
+    """Gerçek spin işlemi - debug ile response'u gösterir"""
     global SESSION_STATS
     
     url_spin = "https://slotfruits.com/api/v1/users/earnRoll"
@@ -147,30 +137,33 @@ def spin(token, user_id):
         print_status(f"Spin error: {e}", "error")
         return 0
 
-    # Response'dan reward'ı çıkar
+    # DEBUG: Response'u göster
+    print_status(f"Spin Response: {json.dumps(res_json, indent=2)}", "debug")
+
+    # Reward'ı çıkarmak için tüm olasılıkları dene
     reward = 0
-    if "total" in res_json:
-        reward = float(res_json["total"])
-    elif "reward" in res_json:
-        reward = float(res_json["reward"])
-    elif "amount" in res_json:
-        reward = float(res_json["amount"])
-    elif "win" in res_json:
-        reward = float(res_json["win"])
-    elif "prize" in res_json:
-        reward = float(res_json["prize"])
-    elif "value" in res_json:
-        reward = float(res_json["value"])
-    else:
-        # Bazı response'lar nested olabilir
-        for key in ["data", "result", "response"]:
-            if key in res_json and isinstance(res_json[key], dict):
-                for sub_key in ["total", "reward", "amount", "win", "prize", "value"]:
-                    if sub_key in res_json[key]:
-                        reward = float(res_json[key][sub_key])
-                        break
-                if reward > 0:
+    if isinstance(res_json, dict):
+        # Doğrudan anahtarlar
+        for key in ["total", "reward", "amount", "win", "prize", "value", "credits", "points"]:
+            if key in res_json:
+                try:
+                    reward = float(res_json[key])
                     break
+                except:
+                    pass
+        # Eğer bulamazsak nested kontrol
+        if reward == 0:
+            for nested in ["data", "result", "response", "user"]:
+                if nested in res_json and isinstance(res_json[nested], dict):
+                    for key in ["total", "reward", "amount", "win", "prize", "value", "credits", "points"]:
+                        if key in res_json[nested]:
+                            try:
+                                reward = float(res_json[nested][key])
+                                break
+                            except:
+                                pass
+                    if reward > 0:
+                        break
 
     SESSION_STATS["spins"] += 1
     if reward > 0:
@@ -180,15 +173,11 @@ def spin(token, user_id):
     return reward
 
 def ads_loop(rwd_userid, doses):
-    """Gerçek ADS farming - Google Ads API'sine istek atar"""
     global SESSION_STATS
     
     print_status("Starting Ads Farming... 💰", "ads")
-    print_status(f"Target: {doses} ad requests", "info")
-
     base_url = "https://googleads.g.doubleclick.net/mads/gma"
 
-    # Temel parametreler
     params = {
         "submodel": "SM-A217F",
         "adid_p": "1",
@@ -266,7 +255,6 @@ def ads_loop(rwd_userid, doses):
         "jsv": "sdk_20190107_RC02-production-sdk_20251202_RC00"
     }
 
-    # Kullanıcıya özel parametreler
     params['rwd_userid'] = str(rwd_userid)
     params['doses'] = str(doses)
 
@@ -287,43 +275,29 @@ def ads_loop(rwd_userid, doses):
     hit_count = 0
     for i in range(doses):
         try:
-            # Her istekte farklı request_id
             params['request_id'] = str(random.randint(1000000000, 9999999999))
             params['seq_num'] = str(random.randint(1, 10))
-            
             res = requests.get(base_url, params=params, headers=headers, timeout=10)
-            
-            if res.status_code == 200:
+            if res.status_code in [200, 304]:
                 hit_count += 1
                 SESSION_STATS["ads_hits"] += 1
                 print_status(f"Ads Hit {hit_count}/{doses} ✅", "ads")
-            elif res.status_code == 304:
-                # Not modified - bu da başarılı sayılır
-                hit_count += 1
-                SESSION_STATS["ads_hits"] += 1
-                print_status(f"Ads Hit {hit_count}/{doses} (cached) ✅", "ads")
             else:
                 print_status(f"Ads Miss {i+1}/{doses} (HTTP {res.status_code})", "warning")
-        except requests.exceptions.Timeout:
-            print_status(f"Ads timeout {i+1}/{doses}", "warning")
         except Exception as e:
             print_status(f"Ads Error {i+1}: {e}", "error")
-        
-        # Rastgele bekleme - daha doğal görünür
         time.sleep(random.uniform(0.5, 2.0))
 
     print_status(f"Ads farming complete! {hit_count}/{doses} hits ✅", "success")
     return hit_count
 
 def get_user_info(token):
-    """Kullanıcı bilgilerini güncel olarak al"""
     url = "https://slotfruits.com/api/v1/users/me"
     headers = {
         "User-Agent": "okhttp/4.12.0",
         "Accept": "application/json, text/plain, */*",
         "authorization": f"Bearer {token}"
     }
-    
     try:
         res = requests.get(url, headers=headers, timeout=10)
         res.raise_for_status()
@@ -332,8 +306,6 @@ def get_user_info(token):
         return {}
 
 def spin_loop(email):
-    global TOTAL_WIN, TOTAL_SPINS
-    
     token, user_id, res_json = login(email)
 
     if not token or not user_id:
@@ -343,17 +315,14 @@ def spin_loop(email):
             spin_loop(email)
         return
 
-    # Extract data with fallback defaults
+    # Extract balance & credits
     balance = 0
     credits = 0
-    
-    # Balance
     if "balance" in res_json:
         balance = float(res_json["balance"])
     elif "user" in res_json and res_json["user"]:
         balance = float(res_json["user"].get("balance", 0))
     
-    # Credits / Spins
     if "credits" in res_json:
         credits = int(res_json["credits"])
     elif "user" in res_json and res_json["user"]:
@@ -362,19 +331,18 @@ def spin_loop(email):
         credits = int(res_json["spins"])
     elif "rolls" in res_json:
         credits = int(res_json["rolls"])
-    
-    # Eğer bilgiler eksikse güncel bilgileri al
-    if credits <= 0 or balance <= 0:
-        user_info = get_user_info(token)
-        if user_info:
-            balance = float(user_info.get("balance", balance))
-            credits = int(user_info.get("credits", credits))
 
-    print_info(email, balance, credits, SESSION_STATS["total_reward"])
+    # Güncel bilgileri al
+    user_info = get_user_info(token)
+    if user_info:
+        balance = float(user_info.get("balance", balance))
+        credits = int(user_info.get("credits", credits))
+
+    print_info(email, balance, credits)
 
     if credits <= 0:
         print_status("No spins left! Switching to ads... ⚠️", "warning")
-        ads_loop(user_id, 10)  # 10 ad request
+        ads_loop(user_id, 10)
         print_status("Restarting cycle in 3 seconds...", "info")
         time.sleep(3)
         spin_loop(email)
@@ -388,42 +356,32 @@ def spin_loop(email):
 
         reward = spin(token, user_id)
 
-        if reward and reward > 0:
-            TOTAL_WIN += reward
-            TOTAL_SPINS += 1
+        if reward > 0:
             print_status(f"🎉 WIN! +${reward:.4f}", "win")
-            print_status(f"💰 Total Win: ${TOTAL_WIN:.4f}", "success")
         else:
             print_status(f"💨 No reward this time", "warning")
 
         credits -= 1
-        
-        # Her 10 spinde bir güncel bilgileri al
-        if spin_count % 10 == 0:
+        if spin_count % 5 == 0:
             user_info = get_user_info(token)
             if user_info:
                 balance = float(user_info.get("balance", balance))
-                print_info(email, balance, credits, SESSION_STATS["total_reward"])
-        
-        # Rastgele bekleme - daha doğal
+                credits = int(user_info.get("credits", credits))
+                print_info(email, balance, credits)
+
         time.sleep(random.uniform(0.8, 1.5))
 
     print_status("🎰 All spins used! 🎰", "success")
     print_status(f"📊 Session Stats: {SESSION_STATS['spins']} spins, {SESSION_STATS['wins']} wins, ${SESSION_STATS['total_reward']:.4f} total", "info")
     
-    # Ads yap
-    print_status("Starting ads farming...", "info")
-    ads_loop(user_id, 15)  # 15 ad request
-
+    ads_loop(user_id, 15)
     print_status("Restarting cycle in 5 seconds...", "info")
     time.sleep(5)
     spin_loop(email)
 
 def main():
     banner()
-
-    print(f"{H6}  🎰 SlotFruit Auto Farmer v2.0{H0}")
-    print(f"{H6}  💰 Earn free crypto with auto spins & ads{H0}")
+    print(f"{H6}  🎰 SlotFruit Auto Farmer v2.1 (Debug){H0}")
     print(f"{H6}  📧 Enter your FaucetPay email to start{H0}")
     print(f"{H6}  ⌨️  Press Ctrl+C to stop anytime{H0}")
     print()
@@ -441,9 +399,6 @@ def main():
 
     print()
     print_status("Starting farming session... 🚀", "info")
-    print_status("Press Ctrl+C to stop", "info")
-    print()
-    
     try:
         spin_loop(email)
     except KeyboardInterrupt:
