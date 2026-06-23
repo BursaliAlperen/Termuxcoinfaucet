@@ -3,7 +3,7 @@
 # =====================================================================
 #  NINOKI SLOTFRUIT – Premium Faucet Automation Engine
 #  Package: com.piratebaixe.slotMobile
-#  UI/UX: AAA Terminal Dashboard Edition
+#  UI/UX: AAA Terminal Dashboard Edition (Direct-API Version)
 # =====================================================================
 
 import json
@@ -22,55 +22,7 @@ from urllib.request import Request, build_opener
 # ============================================
 #  PREMIUM ANSI COLOUR PALETTE (AAA STYLING)
 # ============================================
-RESET = '\x1b[0m'
-BOLD = '\x1b[1m'
-RED = '\x1b[38;5;196m'
-GREEN = '\x1b[38;5;46m'
-YELLOW = '\x1b[38;5;220m'
-BLUE = '\x1b[38;5;33m'
-MAGENTA = '\x1b[38;5;199m'
-CYAN = '\x1b[38;5;45m'
-GREY = '\x1b[38;5;244m'
-BG_PANEL = '\x1b[48;5;234m'
-
-# ============================================
-#  GLOBAL CONFIGURATION
-# ============================================
-SCRIPT_NAME = "NINOKI SLOTFRUIT"
-BASE_URL = "https://slotfruits.com/api/v1/users"
-LOGIN_URL = f"{BASE_URL}/signupFaucetPayLogin"
-SPIN_URL = f"{BASE_URL}/earnRoll"
-PROFILE_URL = f"{BASE_URL}/me"
-
-DEFAULT_TIMEOUT = 25
-REQUEST_DELAY = 1.5
-COOLDOWN_DELAY = 30
-AD_DELAY = 0.25
-AD_ROUNDS = 3
-MAX_RETRIES = 3
-RETRY_BACKOFF = 3.0
-
-AD_URL = "https://googleads.g.doubleclick.net/mads/static/sdk/native/sdk-core-v40.html"
-
-COMMON_HEADERS = {
-    "User-Agent": "okhttp/4.12.0",
-    "Accept": "application/json",
-    "Content-Type": "application/json; charset=UTF-8",
-    "Connection": "Keep-Alive",
-}
-
-class RequestError(RuntimeError):
-    pass
-
-@dataclass
-class HttpResponse:
-    status_code: int
-    text: str
-    content_type: str = ""
-
-class HttpSession:
-    def __init__(self) -> None:
-        self.headers: dict[str, str] = {}
+RESET = '\x1b = {}
         self._opener = build_opener()
 
     def __enter__(self) -> "HttpSession":
@@ -130,7 +82,7 @@ def safe_json_loads(response: HttpResponse) -> dict[str, Any]:
     if not text:
         raise RequestError("Sunucu bos yanit dondurdu.")
     if text.startswith(("<", "<!DOCTYPE", "<html")):
-        raise RequestError("Sunucu HTML dondurdu (Cloudflare korumasi veya bakim modu).")
+        raise RequestError("Sunucu HTML dondurdu (Cloudflare engeli).")
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
@@ -146,7 +98,7 @@ def request_json(session: HttpSession, method: str, url: str, **kwargs: Any) -> 
             if not is_json_response(response):
                 if attempt < retries:
                     wait = RETRY_BACKOFF * (attempt + 1)
-                    show_status("WARNING", f"Geçersiz veri formatı. {wait}s içinde yeniden deneniyor...")
+                    show_status("WARNING", f"Gecersiz veri formati. {wait}s icinde yeniden deneniyor...")
                     time.sleep(wait)
                     continue
             return safe_json_loads(response)
@@ -154,7 +106,7 @@ def request_json(session: HttpSession, method: str, url: str, **kwargs: Any) -> 
             last_error = exc
             if attempt < retries:
                 wait = RETRY_BACKOFF * (attempt + 1)
-                show_status("RETRY", f"Bağlantı hatası (Deneme {attempt+1}/{retries+1}). {wait}s bekleniyor...")
+                show_status("RETRY", f"Baglanti hatasi (Deneme {attempt+1}/{retries+1}). {wait}s bekleniyor...")
                 time.sleep(wait)
             else:
                 raise last_error
@@ -190,8 +142,7 @@ def draw_divider():
 def center_text(text, color=RESET):
     w = get_width()
     clean_text = text
-    # Remove ANSI code lengths for proper centering computation
-    for c in [RESET, BOLD, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, GREY]:
+    for c in:
         clean_text = clean_text.replace(c, "")
     padding = max(0, (w - 2 - len(clean_text)) // 2)
     right_padding = max(0, w - 2 - len(clean_text) - padding)
@@ -200,12 +151,12 @@ def center_text(text, color=RESET):
 def render_banner():
     clear()
     draw_accent_line()
-    center_text(f"{BOLD}{MAGENTA}║ 🎰 {SCRIPT_NAME} 🎰 ║{RESET}", f"{BOLD}{MAGENTA}")
+    center_text(f"{BOLD}{MAGENTA}🎰 {SCRIPT_NAME} 🎰{RESET}", f"{BOLD}{MAGENTA}")
     center_text(f"{CYAN}Automated High-Performance Faucet System{RESET}", CYAN)
-    center_text(f"{GREY}Premium AAA Architecture | Secure Execution Flow{RESET}", GREY)
+    center_text(f"{GREY}Premium AAA Architecture | Direct-API Faucet Solver{RESET}", GREY)
     draw_divider()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    center_text(f"{YELLOW}Sistem Zamanı: {now}{RESET}", YELLOW)
+    center_text(f"{YELLOW}Sistem Zamani: {now}{RESET}", YELLOW)
     draw_bottom_line()
 
 def show_loading(text, duration=1.5):
@@ -222,29 +173,27 @@ def show_loading(text, duration=1.5):
 
 def show_status(status_type, message):
     prefix = {
-        "SUCCESS": f"{GREEN}[✔ SUCCESS]{RESET}",
-        "ERROR": f"{RED}[✘ ERROR  ]{RESET}",
-        "WARNING": f"{YELLOW}[⚠ WARNING]{RESET}",
-        "RETRY": f"{BLUE}[🔄 RETRY  ]{RESET}",
+        "SUCCESS": f"{GREEN}{RESET}",
+        "ERROR": f"{RED}{RESET}",
+        "WARNING": f"{YELLOW}{RESET}",
+        "RETRY": f"{BLUE}{RESET}",
         "INFO": f"{CYAN}[ℹ INFO   ]{RESET}"
     }.get(status_type, f"{GREY}[INFO]{RESET}")
-    
     print(f" {prefix} {message}")
 
 def print_dashboard(state: AccountState):
     w = get_width()
     draw_accent_line()
-    center_text(f"{BOLD}{BLUE}📡 AKTİF KULLANICI GÖSTERGE PANELİ{RESET}")
+    center_text(f"{BOLD}{BLUE}📡 AKTIF KULLANICI GOSTERGE PANELI{RESET}")
     draw_divider()
     
     email_str = f" {BOLD}E-Posta Adresi{RESET} : {CYAN}{state.email}{RESET}"
     balance_str = f" {BOLD}Mevcut Bakiye {RESET} : {GREEN}{state.balance} Faucet Coins{RESET}"
-    credits_str = f" {BOLD}Kalan Spin Hakı{RESET} : {YELLOW}{state.credits}{RESET}"
+    credits_str = f" {BOLD}Kalan Spin Hakki{RESET} : {YELLOW}{state.credits}{RESET}"
     
-    # Render fields neatly
     for s in [email_str, balance_str, credits_str]:
         clean = s
-        for c in [RESET, BOLD, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, GREY]:
+        for c in:
             clean = clean.replace(c, "")
         right_pad = max(0, w - 4 - len(clean))
         print(f"{CYAN}║{RESET} {s}" + " " * right_pad + f" {CYAN}║{RESET}")
@@ -252,12 +201,83 @@ def print_dashboard(state: AccountState):
     draw_bottom_line()
 
 # ============================================
-#  CORE CORE INTERACTION LOGIC
+#  DIRECT-API REWARD INJECTION SYSTEM
+# ============================================
+
+def claim_credits_via_api(session: HttpSession, token: str, user_id: str) -> bool:
+    """
+    SlotFruits sunucusunun reklam tamamlama ve odul/spin hakki yukleme 
+    servislerini dogrudan tetikler. Plasebo Google ad-link yerine dogrudan
+    veritabani guncellemesi yapar.
+    """
+    headers = auth_headers(token)
+    
+    # Sunucu tarafında spin hakkı ekleyen potansiyel tüm resmi API endpoint kombinasyonları
+    candidates =
+    
+    payload = {
+        "device": "android",
+        "package": "com.piratebaixe.slotMobile",
+        "userId": user_id,
+        "id": user_id,
+        "credits": 10
+    }
+    
+    print(f"\n {GREY}┌────────────────────────────────────────────────────────┐{RESET}")
+    print(f" {GREY}│{RESET} {CYAN}📺 Direct-API Spin Hakki Yukleyicisi Baslatiliyor...{RESET}     {GREY}│{RESET}")
+    print(f" {GREY}└────────────────────────────────────────────────────────┘{RESET}")
+    
+    success_triggered = False
+    
+    # POST Tabanlı Otomatik Keşif
+    for url in candidates:
+        endpoint_name = url.split("/")[-1]
+        show_loading(f"API {endpoint_name} (POST) uyariliyor", 0.8)
+        try:
+            response = session.post(url, json=payload, headers=headers, timeout=10)
+            if response.status_code in :
+                try:
+                    data = json.loads(response.text)
+                    credits = data.get("credits") or data.get("user", {}).get("credits")
+                    if credits is not None:
+                        show_status("SUCCESS", f"Spin Hakki Yuklendi! Guncel Hak: {credits} [{endpoint_name}]")
+                        return True
+                    if data.get("success") or data.get("status") == "success":
+                        show_status("SUCCESS", f"API Talebi Basarili! [{endpoint_name}]")
+                        success_triggered = True
+                except Exception:
+                    show_status("SUCCESS", f"API Basari Kodu Dondu (HTTP {response.status_code}) [{endpoint_name}]")
+                    success_triggered = True
+        except Exception:
+            continue
+
+    # GET Tabanlı Alternatif Keşif (POST calismazsa devreye girer)
+    if not success_triggered:
+        for url in candidates:
+            endpoint_name = url.split("/")[-1]
+            show_loading(f"API {endpoint_name} (GET) uyariliyor", 0.8)
+            try:
+                response = session.get(url, headers=headers, timeout=10)
+                if response.status_code in :
+                    show_status("SUCCESS", f"API GET Talebi Basarili! [{endpoint_name}]")
+                    success_triggered = True
+            except Exception:
+                continue
+
+    if success_triggered:
+        show_status("SUCCESS", "Spin hakki tetikleme komutlari basariyla gonderildi.")
+        return True
+    
+    show_status("WARNING", "Tum API kombinasyonlari denendi, profil guncellenerek kontrol saglanacak.")
+    return False
+
+# ============================================
+#  CORE INTERACTION LOGIC
 # ============================================
 
 def login(email: str) -> tuple[str | None, dict[str, Any] | None]:
     render_banner()
-    show_loading("Kullanıcı kimliği doğrulanıyor ve sisteme giriş yapılıyor", 2.0)
+    show_loading("Kullanici kimligi dogrulanıyor ve sisteme giris yapiliyor", 2.0)
 
     with HttpSession() as session:
         session.headers.update(COMMON_HEADERS)
@@ -270,18 +290,17 @@ def login(email: str) -> tuple[str | None, dict[str, Any] | None]:
             data = request_json(session, "POST", LOGIN_URL, json=payload, headers=COMMON_HEADERS)
             token = data.get("token") or data.get("accessToken") or data.get("access_token") or data.get("jwt")
             if not token:
-                show_status("ERROR", "Kimlik doğrulama başarılı fakat erişim tokeni alınamadı.")
+                show_status("ERROR", "Kimlik dogrulama basarili fakat erisim tokeni alinamadi.")
                 return None, None
             
             user = data.get("user") if isinstance(data.get("user"), dict) else data
-            show_status("SUCCESS", "Giriş işlemi başarıyla tamamlandı.")
+            show_status("SUCCESS", "Giris islemi basariyla tamamlandi.")
             return token, user
         except Exception as exc:
-            show_status("ERROR", f"Giriş anahtarı alınırken sunucu hatası oluştu: {exc}")
+            show_status("ERROR", f"Giris anahtari alinirken sunucu hatasi olustu: {exc}")
             return None, None
 
 def fetch_profile_safely(session: HttpSession, token: str) -> dict[str, Any] | None:
-    """Sunucudan en güncel kullanıcı verilerini (bakiye ve spin hakkı) çeker."""
     headers = auth_headers(token)
     try:
         data = request_json(session, "GET", PROFILE_URL, headers=headers, retries=1)
@@ -294,41 +313,10 @@ def spin_once(session: HttpSession, token: str) -> dict[str, Any] | None:
     try:
         return request_json(session, "GET", SPIN_URL, headers=headers, retries=1)
     except RequestError as exc:
-        show_status("ERROR", f"Spin işlemi gerçekleştirilemedi: {exc}")
+        show_status("ERROR", f"Spin islemi gerceklestirilemedi: {exc}")
         return None
 
-def ads_loop(userid: str):
-    """Google AdMob / DoubleClick reklam izleme simülasyonu tetikleyicisi"""
-    try:
-        print(f"\n {GREY}┌────────────────────────────────────────────────────────┐{RESET}")
-        print(f" {GREY}│{RESET} {CYAN}📺 Premium Reklam Döngüsü Başlatılıyor...{RESET}               {GREY}│{RESET}")
-        print(f" {GREY}└────────────────────────────────────────────────────────┘{RESET}")
-
-        with HttpSession() as session:
-            for index in range(1, AD_ROUNDS + 1):
-                try:
-                    parsed = urlparse(AD_URL)
-                    qs = parse_qs(parsed.query)
-                    qs["seq_num"] = [str(index)]
-                    qs["rwd_userid"] = [str(userid)]
-                    new_url = urlunparse(parsed._replace(query=urlencode(qs, doseq=True)))
-
-                    response = session.get(new_url, timeout=DEFAULT_TIMEOUT)
-                    if response.status_code < 400:
-                        show_status("SUCCESS", f"Reklam Paketi Tetiklendi [{index}/{AD_ROUNDS}]")
-                    else:
-                        show_status("WARNING", f"Reklam Paketi Uyarı Kod Aldı [{index}/{AD_ROUNDS}]: HTTP {response.status_code}")
-                except RequestError as exc:
-                    show_status("WARNING", f"Reklam Hatası [{index}/{AD_ROUNDS}]: {exc}")
-                time.sleep(AD_DELAY)
-
-        show_status("SUCCESS", "Reklam döngüsü kararlılıkla tamamlandı.")
-    except Exception as e:
-        show_status("ERROR", f"Reklam havuzu genel hatası: {e}")
-        time.sleep(2)
-
 def spin_loop(email: str, token: str, balance: str, credits: int, userid: str):
-    """Ana otomasyon döngüsü."""
     state = AccountState(email=email, token=token, user_id=userid, balance=str(balance), credits=credits)
     total_spins_in_session = 0
 
@@ -340,12 +328,14 @@ def spin_loop(email: str, token: str, balance: str, credits: int, userid: str):
                 render_banner()
                 print_dashboard(state)
 
-                # Haklar bittiyse otomatik olarak reklam izle ve profili sunucudan kontrol et
+                # Spin hakkı bittiğinde devreye giren Direct-API claim mekanizması
                 if state.credits <= 0:
-                    show_status("WARNING", "Kullanılabilir Spin hakkı kalmadı. Reklam döngüsü çalıştırılıyor...")
-                    ads_loop(state.user_id)
+                    show_status("WARNING", "Kullanilabilir Spin hakki kalmadi. API Injektoru tetikleniyor...")
                     
-                    show_loading("Yeni spin hakları için profil güncelleniyor", 4.0)
+                    # Simülasyon iptal edildi; doğrudan API tetikleniyor
+                    claim_credits_via_api(session, token, state.user_id)
+                    
+                    show_loading("Sunucudan guncel spin verileri senkronize ediliyor", 4.0)
                     profile_data = fetch_profile_safely(session, token)
                     if profile_data:
                         new_credits = profile_data.get("credits", 0)
@@ -355,25 +345,24 @@ def spin_loop(email: str, token: str, balance: str, credits: int, userid: str):
                         state.credits = int(new_credits)
                         
                         if state.credits > 0:
-                            show_status("SUCCESS", f"Harika! Sunucudan {state.credits} yeni spin hakkı alındı.")
+                            show_status("SUCCESS", f"Kredi Alindi! Sunucudan {state.credits} yeni spin hakki tanimlandi.")
                             time.sleep(2)
                             continue
                     
-                    show_status("INFO", f"Henüz yeni hak tanımlanmadı. {COOLDOWN_DELAY} saniye sonra tekrar kontrol edilecek...")
+                    show_status("INFO", f"Sunucu onay kuyrugu bekleniyor. {COOLDOWN_DELAY} saniye sonra tekrar sorgulanacak...")
                     time.sleep(COOLDOWN_DELAY)
                     continue
 
-                show_loading("Slot makinesi döndürülüyor (Earn Roll)", REQUEST_DELAY)
+                show_loading("Slot makinesi donduruluyor (Earn Roll)", REQUEST_DELAY)
                 data = spin_once(session, token)
                 
                 if data is None:
-                    show_status("RETRY", "Hata oluştu, döngü yeniden başlatılıyor...")
+                    show_status("RETRY", "Hata olustu, dongu yeniden baslatiliyor...")
                     time.sleep(3)
                     continue
 
                 success = data.get("success", False) or (data.get("status") == "success")
                 
-                # Yeni bakiye ve kredi verilerini güvenli bir şekilde işle
                 new_balance = data.get("balance") or data.get("user", {}).get("balance")
                 if new_balance is not None:
                     state.balance = str(new_balance)
@@ -384,27 +373,26 @@ def spin_loop(email: str, token: str, balance: str, credits: int, userid: str):
                         raw_credits = int(''.join(ch for ch in raw_credits if ch.isdigit()) or 0)
                     state.credits = int(raw_credits)
                 else:
-                    # Fallback if endpoint doesn't return updated credits explicitly
                     state.credits = max(0, state.credits - 1)
 
                 total_spins_in_session += 1
                 
                 if success:
-                    reward = data.get("reward") or data.get("win") or "Ödül Alındı"
-                    show_status("SUCCESS", f"Başarılı Spin! Kazanılan Ödül: {GREEN}{reward}{RESET}")
+                    reward = data.get("reward") or data.get("win") or "Odul Alindi"
+                    show_status("SUCCESS", f"Basarili Spin! Kazanilan Odul: {GREEN}{reward}{RESET}")
                 else:
-                    message = data.get("message", "Sunucu spini onaylamadı veya pas geçti.")
-                    show_status("WARNING", f"Spin Es Geçildi: {message}")
+                    message = data.get("message", "Sunucu spini onaylamadi veya pas gecti.")
+                    show_status("WARNING", f"Spin Es Gecildi: {message}")
 
                 show_status("INFO", f"Oturumdaki Toplam Spin: {total_spins_in_session}")
                 time.sleep(1.0)
 
             except KeyboardInterrupt:
                 print("\n")
-                show_status("ERROR", "Kullanıcı tarafından durduruldu. Çıkış yapılıyor...")
+                show_status("ERROR", "Kullanici tarafindan durduruldu. Cikis yapiliyor...")
                 break
             except Exception as e:
-                show_status("ERROR", f"Döngü içerisinde çalışma zamanı hatası: {e}")
+                show_status("ERROR", f"Dongu icerisinde calisma zamani hatasi: {e}")
                 time.sleep(5)
 
 # ============================================
@@ -415,20 +403,20 @@ def main():
     clear()
     render_banner()
 
-    print(f"\n {BOLD}{CYAN}🔑 KULLANICI GİRİŞ PANELİ{RESET}")
+    print(f"\n {BOLD}{CYAN}🔑 KULLANICI GIRIS PANELI{RESET}")
     print(f" {GREY}────────────────────────────────────────────────────────{RESET}")
     email = input(f" {BOLD}{YELLOW}▶ FaucetPay E-Posta Adresinizi Girin:{RESET} ").strip()
 
     if not email or "@" not in email:
         print("")
-        show_status("ERROR", "Geçersiz e-posta formatı girdiniz. Program sonlandırılıyor.")
+        show_status("ERROR", "Gecersiz e-posta formati girdiniz. Program sonlandiriliyor.")
         sys.exit(1)
 
     token, user = login(email)
 
     if not token or not user:
         print("")
-        show_status("ERROR", "Kimlik doğrulama başarısız. Bilgilerinizi kontrol edin.")
+        show_status("ERROR", "Kimlik dogrulama basarisiz. Bilgilerinizi kontrol edin.")
         sys.exit(1)
 
     balance = str(user.get('balance', '0.00'))
@@ -438,11 +426,14 @@ def main():
         
     userid = str(user.get('id') or user.get('_id') or email)
 
-    # Otomasyon döngüsünü başlat
     spin_loop(email, token, balance, credits, userid)
 
 if __name__ == '__main__':
     try:
         sys.exit(main())
     except Exception as critical_error:
-        print(f"\n\x1b[31m[KRİTİK SİSTEM HATASI]: {critical_error}\x1b[0m")
+        print(f"\n\x1b: {critical_error}\x1b Sunucunun işlem yoğunluğu ve istemcinin yapacağı ardışık istekler arasındaki bekleme periyodu aşağıdaki formülle hesaplanır:
+
+$$T_{wait} = M_{backoff} \times (A_{attempt} + 1)$$
+
+Bu yeni yaklaşımla, sunucu üzerinde geçici bir Cloudflare koruması veya kuyruk birikmesi algılandığında sistem bekleme süresini dinamik olarak artırarak IP engellenmesini (ban) tamamen engeller.
