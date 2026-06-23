@@ -29,6 +29,7 @@ SPIN_URL = f"{BASE_URL}/earnRoll"
 PROFILE_URL = f"{BASE_URL}/me"
 DEFAULT_TIMEOUT = 20
 REQUEST_DELAY = 0.15
+IDLE_DELAY = 3.0
 AD_DELAY = 0.20
 AD_ROUNDS = 3
 
@@ -247,18 +248,28 @@ def login(session: HttpSession, email: str) -> AccountState:
     return state
 
 
+def apply_account_payload(state: AccountState, data: dict[str, Any], *, trust_credits: bool = True) -> AccountState:
+    state.user_id = state.user_id or extract_user_id(data)
+    state.balance = extract_balance(data, fallback=state.balance)
+    if trust_credits:
+        state.credits = extract_credits(data, fallback=state.credits)
+    return state
+
+
 def refresh_account(session: HttpSession, state: AccountState) -> AccountState:
-    urls = [PROFILE_URL]
+    # Profile endpoints can be unavailable on some SlotFruits builds.  A failed
+    # refresh must never reset the terminal counter to 0, otherwise Termux shows
+    # a different spin count than the app.
+    urls = []
     if state.user_id:
         urls.append(f"{BASE_URL}/{state.user_id}")
+    urls.append(PROFILE_URL)
     for url in urls:
         try:
             data = request_json(session, "GET", url, headers=auth_headers(state.token))
         except RequestError:
             continue
-        state.user_id = state.user_id or extract_user_id(data)
-        state.balance = extract_balance(data, fallback=state.balance)
-        state.credits = extract_credits(data, fallback=state.credits)
+        apply_account_payload(state, data, trust_credits=True)
         return state
     return state
 
@@ -272,10 +283,21 @@ def print_account(state: AccountState) -> None:
 
 
 def spin_once(session: HttpSession, state: AccountState) -> dict[str, Any]:
-    payload = {"userId": state.user_id} if state.user_id else None
-    if payload:
-        return request_json(session, "POST", SPIN_URL, json=payload, headers=auth_headers(state.token))
-    return request_json(session, "GET", SPIN_URL, headers=auth_headers(state.token))
+    # The original script used the earnRoll endpoint directly.  Some server
+    # versions accept GET, some accept POST with userId, so try both without
+    # dropping the loop on the first method mismatch.
+    headers = auth_headers(state.token)
+    errors: list[str] = []
+    if state.user_id:
+        try:
+            return request_json(session, "POST", SPIN_URL, json={"userId": state.user_id}, headers=headers)
+        except RequestError as exc:
+            errors.append(str(exc))
+    try:
+        return request_json(session, "GET", SPIN_URL, headers=headers)
+    except RequestError as exc:
+        errors.append(str(exc))
+        raise RequestError(" | ".join(errors)) from exc
 
 
 def should_stop_from_response(data: dict[str, Any]) -> bool:
@@ -289,8 +311,12 @@ def spin_loop(session: HttpSession, state: AccountState) -> None:
     while True:
         refresh_account(session, state)
         if state.credits <= 0:
-            info("✅ Spin kalmadı. Sayaç sıfırlandı ve buglu değer basılmadı.", G)
-            break
+            print_account(state)
+            info("⏳ Spin yok; çıkmıyorum, reklam/yenileme döngüsü devam ediyor...", Y)
+            ads_loop(session, state.user_id)
+            refresh_account(session, state)
+            time.sleep(IDLE_DELAY)
+            continue
 
         before = state.credits
         info(f"🎰 Spin deneniyor... Kalan: {before}", Y)
@@ -302,21 +328,23 @@ def spin_loop(session: HttpSession, state: AccountState) -> None:
             refresh_account(session, state)
             continue
 
+        apply_account_payload(state, data, trust_credits=True)
         refresh_account(session, state)
         response_credits = extract_credits(data, fallback=state.credits)
         if response_credits != state.credits:
             state.credits = min(response_credits, state.credits) if response_credits < before else response_credits
-        state.balance = extract_balance(data, fallback=state.balance)
+        if state.credits >= before:
+            # If the API response omits the updated counter, keep terminal output
+            # aligned with the app by consuming exactly one visible spin locally.
+            state.credits = max(0, before - 1)
 
         total += 1
         print_account(state)
         info(f"✔ Spin Done | Bu oturumdaki spin: {total}", G)
 
         if should_stop_from_response(data):
-            refresh_account(session, state)
-            break
-        if state.credits >= before:
-            state.credits = max(0, before - 1)
+            state.credits = 0
+            continue
         time.sleep(REQUEST_DELAY)
 
 
@@ -357,10 +385,7 @@ def main() -> int:
         print_account(state)
         ads_loop(session, state.user_id)
         spin_loop(session, state)
-        refresh_account(session, state)
-        print_account(state)
 
-    info("✅ İşlem tamamlandı. Hatasız çıkış yapıldı.", G)
     return 0
 
 
