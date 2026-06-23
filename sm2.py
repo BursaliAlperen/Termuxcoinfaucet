@@ -168,27 +168,46 @@ def _ad_callback_url(raw_url: str, userid: str) -> str:
 
 
 def ads_loop(userid: str) -> None:
-    """Fetch and hit ad reward callback URLs."""
+    """Fetch and hit ad reward callback URLs without aborting the main loop."""
     print(CYAN + line("─") + RESET)
     print(YELLOW + "🚀 Start Ads Farming..." + RESET)
 
     for index in range(1, 4):
-        response = requests.get(ADS_URL, headers=ADS_HEADERS, timeout=DEFAULT_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
+        try:
+            response = requests.get(ADS_URL, headers=ADS_HEADERS, timeout=DEFAULT_TIMEOUT)
+            if response.status_code != 200:
+                print(RED + f"Error Ads ({response.status_code})" + RESET)
+                time.sleep(3)
+                continue
 
-        video_urls = data.get("ad_networks", [{}])[0].get("video_reward_urls", [])
+            data = response.json()
+        except requests.RequestException as exc:
+            print(RED + f"Error Ads ({exc})" + RESET)
+            time.sleep(3)
+            continue
+        except ValueError:
+            print(RED + "Error Ads (invalid JSON)" + RESET)
+            time.sleep(3)
+            continue
+
+        ad_networks = data.get("ad_networks") or []
+        video_urls = ad_networks[0].get("video_reward_urls", []) if ad_networks else []
         if not video_urls:
             print(RED + "Error Ads" + RESET)
             time.sleep(3)
             continue
 
         reward_url = _ad_callback_url(video_urls[0], userid)
-        callback = requests.get(
-            reward_url,
-            headers={"Content-Type": "application/json"},
-            timeout=DEFAULT_TIMEOUT,
-        )
+        try:
+            callback = requests.get(
+                reward_url,
+                headers={"Content-Type": "application/json"},
+                timeout=DEFAULT_TIMEOUT,
+            )
+        except requests.RequestException as exc:
+            print(RED + f"Error Ads ({exc})" + RESET)
+            time.sleep(3)
+            continue
 
         if callback.status_code == 200:
             print(GREEN + f"✔ Ads Hit {index}" + RESET)
