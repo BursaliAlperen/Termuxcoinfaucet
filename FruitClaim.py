@@ -82,7 +82,18 @@ def login(email: str):
     return token, user.get("_id"), user.get("balance", 0), user.get("credits", 0)
 
 
+def normalize_credit_count(value) -> int:
+    """Best-effort conversion of API credit values to an integer count."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def run_spin_loop(email: str, token: str, balance, credits):
+    credits = normalize_credit_count(credits)
+    repeated_credit_count = 0
+
     while credits > 0:
         animate_status("🎰 Try To Spin")
         headers = {
@@ -95,11 +106,21 @@ def run_spin_loop(email: str, token: str, balance, credits):
         total_reward = spin_response.get("total", 0)
         user = spin_response.get("user", {})
         balance = user.get("balance", balance)
-        credits = user.get("credits", credits)
+        new_credits = normalize_credit_count(user.get("credits", credits))
+        if new_credits == credits:
+            repeated_credit_count += 1
+        else:
+            repeated_credit_count = 0
+        credits = new_credits
         print_banner()
         print_account_info(email, balance, credits)
         print(f"{YELLOW}🎁 Reward        : {RESET}{total_reward}")
         print(CYAN + make_line("═"))
+        if spin_response.get("message"):
+            print(f"{YELLOW}API Message      : {RESET}{spin_response.get('message')}")
+        if spin_response.get("success") is False or repeated_credit_count >= 2:
+            print(f"{YELLOW}Spin stopped because the API no longer decreased credits.{RESET}")
+            break
         time.sleep(1)
     return balance, credits
 

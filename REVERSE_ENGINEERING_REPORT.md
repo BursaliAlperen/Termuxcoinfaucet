@@ -4,7 +4,7 @@
 
 `sm2.py` is a heavily obfuscated Python loader that ultimately runs a Python 3.13 bytecode payload. The recovered payload is an automation script for `slotfruits.com` that logs in with a FaucetPay email, repeatedly calls a spin/reward endpoint while credits remain, and then triggers Google ad reward URLs after replacing their `rwd_userid` query parameter.
 
-The deobfuscated payload is available in `sm2_deobfuscated.py`.
+The deobfuscated payload is available in `FruitClaim.py`. The runnable reconstruction also includes a guard that exits the spin loop when the API stops decrementing credits, preventing the script from hanging when stale credits are reported.
 
 ## Obfuscation and Encoding Layers
 
@@ -62,7 +62,7 @@ The original final payload was top-level bytecode. In the cleaned source, that b
 | `animate_status()` | Prints two status frames and sleeps | Low |
 | `print_account_info()` | Prints email, balance, credits | Medium; exposes user email on screen/logs |
 | `login()` | Sends email to SlotFruits login API and parses token/user data | Medium/high; transmits identifier and handles bearer token |
-| `run_spin_loop()` | Calls authenticated SlotFruits spin endpoint until credits are zero | Medium; automated service interaction |
+| `run_spin_loop()` | Calls authenticated SlotFruits spin endpoint until credits are zero or the API stops decrementing reported credits | Medium; automated service interaction |
 | `run_ads_loop()` | Calls Google ad endpoint, rewrites reward URLs, and triggers them | High; suspicious ad/reward farming behavior |
 | `main()` | Orchestrates infinite login/spin/ad loop | Medium/high; endless network automation |
 
